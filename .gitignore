@@ -39,3 +39,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local editor settings
+.vscode/
+
+# Turbopack cache
+.turbo/
+
+# Prisma generated client
+/src/lib/database/generated
