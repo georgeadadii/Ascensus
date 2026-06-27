@@ -29,11 +29,11 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Check TypeScript types
-        run: npm run typecheck
-
       - name: Generate Next.js types
         run: npx next typegen
+
+      - name: Check TypeScript types
+        run: npm run typecheck
 
       - name: Check Prisma schema
         run: npm run prisma:validate
