@@ -11,7 +11,8 @@
     "format:check": "prettier . --check",
     "typecheck": "tsc --noEmit",
     "prisma:validate": "prisma validate",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "prepare": "husky"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -27,9 +28,20 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8",
     "prettier": "^3.9.0",
     "prisma": "^6.19.3",
     "tailwindcss": "^4",
     "typescript": "^5"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,md,css}": [
+      "prettier --write"
+    ]
   }
 }
