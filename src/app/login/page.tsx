@@ -1,6 +1,6 @@
-"use client";
+"use client"
 
-import { authClient } from "@/lib/auth/client";
+import { authClient } from "@/lib/auth/client"
 
 export default function LoginPage() {
   const signIn = async () => {
@@ -8,8 +8,8 @@ export default function LoginPage() {
       provider: "google",
       callbackURL: "/dashboard",
       newUserCallbackURL: "/dashboard",
-    });
-  };
+    })
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center">
@@ -20,5 +20,5 @@ export default function LoginPage() {
         Continue with Google
       </button>
     </main>
-  );
+  )
 }
