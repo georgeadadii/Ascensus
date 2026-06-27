@@ -6,8 +6,19 @@ import type { AppRoutes, LayoutRoutes, ParamMap } from "./routes.js"
 import type { ResolvingMetadata, ResolvingViewport } from "next/types.js"
 
 type AppPageConfig<Route extends AppRoutes = AppRoutes> = {
-  default: React.ComponentType<{ params: Promise<ParamMap[Route]> } & any> | ((props: { params: Promise<ParamMap[Route]> } & any) => React.ReactNode | Promise<React.ReactNode> | never | void | Promise<void>)
-  generateStaticParams?: (props: { params: ParamMap[Route] }) => Promise<any[]> | any[]
+  default:
+    | React.ComponentType<{ params: Promise<ParamMap[Route]> } & any>
+    | ((
+        props: { params: Promise<ParamMap[Route]> } & any
+      ) =>
+        | React.ReactNode
+        | Promise<React.ReactNode>
+        | never
+        | void
+        | Promise<void>)
+  generateStaticParams?: (props: {
+    params: ParamMap[Route]
+  }) => Promise<any[]> | any[]
   generateMetadata?: (
     props: { params: Promise<ParamMap[Route]> } & any,
     parent: ResolvingMetadata
@@ -21,8 +32,19 @@ type AppPageConfig<Route extends AppRoutes = AppRoutes> = {
 }
 
 type LayoutConfig<Route extends LayoutRoutes = LayoutRoutes> = {
-  default: React.ComponentType<LayoutProps<Route>> | ((props: LayoutProps<Route>) => React.ReactNode | Promise<React.ReactNode> | never | void | Promise<void>)
-  generateStaticParams?: (props: { params: ParamMap[Route] }) => Promise<any[]> | any[]
+  default:
+    | React.ComponentType<LayoutProps<Route>>
+    | ((
+        props: LayoutProps<Route>
+      ) =>
+        | React.ReactNode
+        | Promise<React.ReactNode>
+        | never
+        | void
+        | Promise<void>)
+  generateStaticParams?: (props: {
+    params: ParamMap[Route]
+  }) => Promise<any[]> | any[]
   generateMetadata?: (
     props: { params: Promise<ParamMap[Route]> } & any,
     parent: ResolvingMetadata
@@ -35,7 +57,6 @@ type LayoutConfig<Route extends LayoutRoutes = LayoutRoutes> = {
   viewport?: any
 }
 
-
 // Validate ../../app/page.tsx
 {
   type __IsExpected<Specific extends AppPageConfig<"/">> = Specific
@@ -44,12 +65,6 @@ type LayoutConfig<Route extends LayoutRoutes = LayoutRoutes> = {
   // @ts-ignore
   type __Unused = __Check
 }
-
-
-
-
-
-
 
 // Validate ../../app/layout.tsx
 {
