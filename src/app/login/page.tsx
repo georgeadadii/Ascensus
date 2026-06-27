@@ -1,13 +1,13 @@
-"use client";
+"use client"
 
-import { authClient } from "@/lib/auth/client";
+import { authClient } from "@/lib/auth/client"
 
 export default function LoginPage() {
   const signIn = async () => {
     await authClient.signIn.social({
       provider: "google",
-    });
-  };
+    })
+  }
 
   return (
     <main className="flex min-h-screen items-center justify-center">
@@ -18,5 +18,5 @@ export default function LoginPage() {
         Continue with Google
       </button>
     </main>
-  );
+  )
 }
