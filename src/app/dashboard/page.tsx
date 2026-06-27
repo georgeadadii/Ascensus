@@ -16,11 +16,26 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { ArrowRightIcon } from "lucide-react"
+import { headers } from "next/headers"
+import { auth } from "@/lib/auth/auth"
+import { getCurrentUser } from "@/app/db/users"
+import { redirect } from "next/navigation"
 
-export default function Page() {
+export default async function Page() {
+  const session = await auth.api.getSession({
+    headers: await headers(),
+  })
+  if (!session) {
+    return null
+  }
+  const user = await getCurrentUser()
+  if (!user) {
+    redirect("/login")
+  }
+
   return (
     <SidebarProvider>
-      <AppSidebar />
+      <AppSidebar user={user} />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border/60 bg-background/80 backdrop-blur">
           <div className="flex items-center gap-2 px-4">
@@ -32,9 +47,7 @@ export default function Page() {
             <Breadcrumb>
               <BreadcrumbList>
                 <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="/dashboard">
-                    Dashboard
-                  </BreadcrumbLink>
+                  <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
