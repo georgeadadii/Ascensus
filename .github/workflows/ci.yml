@@ -13,6 +13,9 @@ jobs:
   quality:
     runs-on: ubuntu-latest
 
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
     steps:
       - uses: actions/checkout@v4
 
@@ -28,9 +31,6 @@ jobs:
 
       - name: Lint
         run: npm run lint
-
-      - name: Generate Next.js types
-        run: npx next typegen
 
       - name: Check Prisma schema
         run: npm run prisma:validate
