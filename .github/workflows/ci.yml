@@ -31,3 +31,6 @@ jobs:
 
       - name: Check TypeScript types
         run: npm run typecheck
+      
+      - name: Check Prisma schema
+        run: npm run prisma:validate
