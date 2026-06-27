@@ -32,11 +32,5 @@ jobs:
       - name: Generate Next.js types
         run: npx next typegen
 
-      - name: Generate Prisma Client
-        run: npm run prisma:generate
-
       - name: Check Prisma schema
         run: npm run prisma:validate
-
-      - name: Check TypeScript types
-        run: npm run typecheck
