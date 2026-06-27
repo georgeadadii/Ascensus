@@ -1,0 +1,9 @@
+node_modules
+.next
+coverage
+dist
+build
+
+src/lib/database/generated
+
+package-lock.json
