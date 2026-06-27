@@ -16,72 +16,71 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import {
-  TerminalSquareIcon,
-  BotIcon,
-  BookOpenIcon,
-  Settings2Icon,
-  LifeBuoyIcon,
   SendIcon,
-  FrameIcon,
-  PieChartIcon,
-  MapIcon,
   TerminalIcon,
   Grip,
   CogIcon,
+  PersonStanding,
+  Apple,
+  Dumbbell,
+  BedDouble,
+  BookCheck,
+  Brain,
+  NotebookPen,
 } from "lucide-react"
 
 const data = {
   navMain: [
     {
       title: "Overview",
-      url: "#",
+      url: "/overview",
       icon: <Grip />,
     },
     {
       title: "Body",
-      url: "#",
-      icon: <BotIcon />,
+      url: "/body",
+      icon: <PersonStanding />,
     },
     {
       title: "Nutrition",
-      url: "#",
-      icon: <BookOpenIcon />,
+      url: "/nutrition",
+      icon: <Apple />,
     },
     {
       title: "Training",
-      url: "#",
-      icon: <Settings2Icon />,
+      url: "/training",
+      icon: <Dumbbell />,
     },
     {
       title: "Sleep",
-      url: "#",
-      icon: <Settings2Icon />,
+      url: "/sleep",
+      icon: <BedDouble />,
     },
     {
       title: "Habits",
-      url: "#",
-      icon: <Settings2Icon />,
+      url: "/habits",
+      icon: <BookCheck />,
     },
     {
       title: "Insights",
-      url: "#",
-      icon: <Settings2Icon />,
+      url: "/insights",
+      icon: <Brain />,
     },
     {
       title: "Journal",
-      url: "#",
-      icon: <Settings2Icon />,
+      url: "/journal",
+      icon: <NotebookPen />,
     },
   ],
   navSecondary: [
     {
       title: "Settings",
-      url: "#",
+      url: "/settings",
       icon: <CogIcon />,
     },
     {
       title: "Feedback",
-      url: "#",
+      url: "/feedback",
       icon: <SendIcon />,
     },
   ],
@@ -90,9 +89,7 @@ const data = {
 type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
   user: {
     name: string | null
-
     email: string
-
     image: string | null
   }
 }
@@ -104,13 +101,13 @@ export function AppSidebar({ user, ...props }: AppSidebarProps) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href="/dashboard">
+              <a href="/overview">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                   <TerminalIcon className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">Ascensus</span>
-                  <span className="truncate text-xs">Dashboard home</span>
+                  <span className="truncate text-xs">Overview home</span>
                 </div>
               </a>
             </SidebarMenuButton>
