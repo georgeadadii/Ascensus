@@ -6,6 +6,8 @@ export default function LoginPage() {
   const signIn = async () => {
     await authClient.signIn.social({
       provider: "google",
+      callbackURL: "/overview",
+      newUserCallbackURL: "/overview",
     })
   }
 
