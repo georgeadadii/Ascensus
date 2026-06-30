@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client"
   output   = "../src/lib/database/generated"
@@ -24,6 +18,9 @@ model User {
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
+  
+  userBaseline  UserBaseline?
+  bodyMetrics   BodyMetric[]
 
   @@unique([email])
   @@map("user")
@@ -75,4 +72,37 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+model UserBaseline {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  initialWeight   Float
+  initialBodyFat  Float?
+  height          Float
+  targetWeight    Float?
+  activityLevel   String?
+  userId          String   @unique @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model BodyMetric {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  date       DateTime
+  weight     Float?
+  bodyFat    Float?
+  muscleMass Float?
+  leanMass   Float?
+  bmi        Float?
+  ffmi       Float?
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // One entry per user per day — lets us upsert "today's" log instead of
+  // inserting a duplicate row when a metric is logged again the same day.
+  @@unique([userId, date])
+  @@index([userId, date])
 }
