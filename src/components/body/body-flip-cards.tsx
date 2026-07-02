@@ -66,7 +66,7 @@ function MetricFlipCard({
   return (
     <>
       <FlipCard
-        height="148px"
+        height="180px"
         front={
           <>
             <p className="text-[11px] text-muted-foreground">{meta.label}</p>

@@ -22,7 +22,7 @@ const progressPhotos = [
   { label: "Back", date: "Jun 1" },
 ]
 
-const chartViews: { value: BodyChartView; label: string }[] = [
+const chartItems: { value: BodyChartView; label: string }[] = [
   { value: "weight", label: "Weight" },
   { value: "bodyFat", label: "Body fat" },
   { value: "muscleMass", label: "Muscle mass" },
@@ -47,11 +47,13 @@ export function BodyDashboard({ overview }: { overview: BodyOverview }) {
   const [logDialogOpen, setLogDialogOpen] = React.useState(false)
   const [measurementDialogOpen, setMeasurementDialogOpen] =
     React.useState(false)
-  const [chartView, setChartView] = React.useState<BodyChartView>("weight")
+  const [selectedViews, setSelectedViews] = React.useState<BodyChartView[]>([
+    "weight",
+  ])
   const photoInputRef = React.useRef<HTMLInputElement>(null)
 
   const weight = overview.summaries.weight
-  const activeSummary = overview.summaries[chartView]
+  // const activeSummary = overview.summaries[chartView]
 
   const hasMeasurements = overview.measurements.some((m) => m.value !== "–")
 
@@ -81,15 +83,29 @@ export function BodyDashboard({ overview }: { overview: BodyOverview }) {
 
         <div className="flex w-full flex-col gap-2">
           <AnimatedTabs
-            items={chartViews}
-            value={chartView}
-            onValueChange={(value) => setChartView(value as BodyChartView)}
-            className="w-full max-w-lg"
+            items={chartItems}
+            values={selectedViews}
+            onValueChange={(value) => {
+              const metric = value as BodyChartView
+              setSelectedViews((current) => {
+                const isSelected = current.includes(metric)
+                if (isSelected) {
+                  // Never allow zero selected metrics.
+                  if (current.length === 1) {
+                    return current
+                  }
+                  // Remove the metric while preserving the order of the remaining metrics.
+                  return current.filter((m) => m !== metric)
+                }
+                // Append newly selected metrics so selection order is preserved.
+                return [...current, metric]
+              })
+            }}
           />
           <ChartAreaInteractive
-            view={chartView}
-            series={activeSummary.series}
-            goal={chartView === "weight" ? overview.targetWeight : null}
+            views={selectedViews}
+            summaries={overview.summaries}
+            goal={overview.targetWeight}
           />
         </div>
 

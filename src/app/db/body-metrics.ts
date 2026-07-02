@@ -2,13 +2,7 @@ import { prisma } from "@/lib/database/prisma"
 
 export type BodyMetricField = "weight" | "bodyFat" | "muscleMass" | "leanMass"
 export type MeasurementField =
-  | "waist"
-  | "chest"
-  | "hips"
-  | "leftArm"
-  | "rightArm"
-  | "leftLeg"
-  | "rightLeg"
+  "waist" | "chest" | "hips" | "leftArm" | "rightArm" | "leftLeg" | "rightLeg"
 
 export type MetricPoint = { date: string; value: number }
 
@@ -48,7 +42,12 @@ export type BodyOverview = {
   measurements: MeasurementSummary[]
 }
 
-const FIELDS: BodyMetricField[] = ["weight", "bodyFat", "muscleMass", "leanMass"]
+const FIELDS: BodyMetricField[] = [
+  "weight",
+  "bodyFat",
+  "muscleMass",
+  "leanMass",
+]
 
 const MEASUREMENT_FIELDS: { field: MeasurementField; label: string }[] = [
   { field: "waist", label: "Waist" },
@@ -171,7 +170,9 @@ export async function getBodyOverview(userId: string): Promise<BodyOverview> {
       const val = latestM?.[field]
       const prev = previousM?.[field]
       const delta =
-        val != null && prev != null ? Math.round((val - prev) * 100) / 100 : null
+        val != null && prev != null
+          ? Math.round((val - prev) * 100) / 100
+          : null
 
       return {
         label,

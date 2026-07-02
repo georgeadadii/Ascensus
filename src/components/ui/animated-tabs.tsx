@@ -1,5 +1,3 @@
-"use client"
-
 import * as React from "react"
 import { motion } from "framer-motion"
 
@@ -12,25 +10,22 @@ export type AnimatedTabItem = {
 
 type AnimatedTabsProps = {
   items: AnimatedTabItem[]
-  value: string
+  values: string[]
   onValueChange: (value: string) => void
   className?: string
 }
 
 /**
  * Segmented pill tabs with a sliding active indicator (framer-motion shared
- * layout). Controlled via `value` / `onValueChange` so it can drive a chart,
- * a panel, or anything else.
+ * layout). Controlled via `values` / `onValueChange` so it can drive a chart,
+ * a panel, or anything else. Supports multiple selected tabs.
  */
 export function AnimatedTabs({
   items,
-  value,
+  values,
   onValueChange,
   className,
 }: AnimatedTabsProps) {
-  // Unique per instance so multiple tab bars on a page animate independently.
-  const layoutId = React.useId()
-
   return (
     <div
       role="tablist"
@@ -40,7 +35,7 @@ export function AnimatedTabs({
       )}
     >
       {items.map((item) => {
-        const active = item.value === value
+        const active = values.includes(item.value)
         return (
           <button
             key={item.value}
@@ -48,12 +43,17 @@ export function AnimatedTabs({
             role="tab"
             aria-selected={active}
             onClick={() => onValueChange(item.value)}
-            className="relative rounded-lg px-3 py-1.5 text-sm font-medium text-white outline-none transition-colors"
+            className={cn(
+              "relative rounded-lg px-3 py-1.5 text-sm font-medium outline-none transition-colors",
+              active ? "text-white" : "text-black"
+            )}
           >
             {active && (
               <motion.div
-                layoutId={layoutId}
-                transition={{ type: "spring", duration: 0.4, bounce: 0.2 }}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                transition={{ duration: 0.15 }}
                 className="absolute inset-0 rounded-lg bg-[#111111d1] bg-opacity-50 shadow-[0_0_20px_rgba(0,0,0,0.2)] backdrop-blur-sm"
               />
             )}
