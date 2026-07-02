@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache"
 import { auth } from "@/lib/auth/auth"
 import { prisma } from "@/lib/database/prisma"
 import type { Prisma } from "@/lib/database/generated/client"
-import type { BodyMetricField } from "@/app/db/body-metrics"
+import type { BodyMetricField, MeasurementField } from "@/app/db/body-metrics"
 
 /** Metrics stored in kilograms — these honour the kg/lbs/st unit toggle. */
 const MASS_FIELDS: BodyMetricField[] = ["weight", "muscleMass", "leanMass"]
@@ -80,4 +80,34 @@ export async function logBodyMetric({
 
   revalidatePath("/body")
   return { ok: true, value: stored }
+}
+
+export type LogMeasurementInput = Record<MeasurementField, number | undefined>
+
+/**
+ * Records physical measurements for the signed-in user.
+ */
+export async function logMeasurements(
+  input: LogMeasurementInput
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session?.user) {
+    return { ok: false, error: "You must be signed in to log measurements." }
+  }
+
+  const userId = session.user.id
+  const date = startOfUtcDay()
+
+  await prisma.measurement.upsert({
+    where: { userId_date: { userId, date } },
+    create: {
+      userId,
+      date,
+      ...input,
+    } as Prisma.MeasurementUncheckedCreateInput,
+    update: input as Prisma.MeasurementUncheckedUpdateInput,
+  })
+
+  revalidatePath("/body")
+  return { ok: true }
 }

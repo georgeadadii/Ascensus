@@ -1,6 +1,14 @@
 import { prisma } from "@/lib/database/prisma"
 
 export type BodyMetricField = "weight" | "bodyFat" | "muscleMass" | "leanMass"
+export type MeasurementField =
+  | "waist"
+  | "chest"
+  | "hips"
+  | "leftArm"
+  | "rightArm"
+  | "leftLeg"
+  | "rightLeg"
 
 export type MetricPoint = { date: string; value: number }
 
@@ -25,10 +33,19 @@ export type MetricSummary = {
   series: MetricPoint[]
 }
 
+export type MeasurementSummary = {
+  label: string
+  field: MeasurementField
+  value: string
+  delta: string
+  positive: boolean | null
+}
+
 export type BodyOverview = {
   summaries: Record<BodyMetricField, MetricSummary>
   /** target weight from the user's baseline, used as the chart goal line */
   targetWeight: number | null
+  measurements: MeasurementSummary[]
 }
 
 const FIELDS: BodyMetricField[] = [
@@ -36,6 +53,15 @@ const FIELDS: BodyMetricField[] = [
   "bodyFat",
   "muscleMass",
   "leanMass",
+]
+
+const MEASUREMENT_FIELDS: { field: MeasurementField; label: string }[] = [
+  { field: "waist", label: "Waist" },
+  { field: "chest", label: "Chest" },
+  { field: "hips", label: "Hips" },
+  { field: "leftArm", label: "Left arm" },
+  { field: "rightArm", label: "Right arm" },
+  { field: "leftLeg", label: "Thigh" },
 ]
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -115,7 +141,7 @@ export async function getBodyOverview(userId: string): Promise<BodyOverview> {
   const since = new Date(now)
   since.setUTCDate(since.getUTCDate() - 120)
 
-  const [rows, baseline] = await Promise.all([
+  const [rows, baseline, measurementRows] = await Promise.all([
     prisma.bodyMetric.findMany({
       where: { userId, date: { gte: since } },
       orderBy: { date: "asc" },
@@ -131,14 +157,43 @@ export async function getBodyOverview(userId: string): Promise<BodyOverview> {
       where: { userId },
       select: { targetWeight: true },
     }),
+    prisma.measurement.findMany({
+      where: { userId },
+      orderBy: { date: "desc" },
+      take: 2,
+    }),
   ])
 
   const summaries = Object.fromEntries(
     FIELDS.map((field) => [field, buildSummary(field, rows, now)])
   ) as Record<BodyMetricField, MetricSummary>
 
+  const latestM = measurementRows[0]
+  const previousM = measurementRows[1]
+
+  const measurements: MeasurementSummary[] = MEASUREMENT_FIELDS.map(
+    ({ field, label }) => {
+      const val = latestM?.[field]
+      const prev = previousM?.[field]
+      const delta =
+        val != null && prev != null
+          ? Math.round((val - prev) * 100) / 100
+          : null
+
+      return {
+        label,
+        field,
+        value: val != null ? `${val} cm` : "–",
+        delta:
+          delta != null ? `${delta > 0 ? "↑" : "↓"} ${Math.abs(delta)}` : "–",
+        positive: delta != null ? delta < 0 : null,
+      }
+    }
+  )
+
   return {
     summaries,
     targetWeight: baseline?.targetWeight ?? null,
+    measurements,
   }
 }

@@ -9,20 +9,12 @@ import {
 } from "@/components/body/chart-area-interactive"
 import { BodyFlipCards } from "@/components/body/body-flip-cards"
 import { BodyLogDialog } from "@/components/body/body-log-dialog"
+import { MeasurementLogDialog } from "@/components/body/measurement-log-dialog"
 import { AnimatedTabs } from "@/components/ui/animated-tabs"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
 import type { BodyMetricField, BodyOverview } from "@/app/db/body-metrics"
-
-const measurements = [
-  { label: "Waist", value: "84 cm", delta: "↓ 1.5", positive: true },
-  { label: "Chest", value: "102 cm", delta: "↑ 0.5", positive: true },
-  { label: "Hips", value: "98 cm", delta: "↓ 0.5", positive: true },
-  { label: "Left arm", value: "37 cm", delta: "↑ 0.5", positive: true },
-  { label: "Right arm", value: "37.5 cm", delta: "↑ 0.5", positive: true },
-  { label: "Thigh", value: "58 cm", delta: "–", positive: null },
-]
 
 const progressPhotos = [
   { label: "Front", date: "Jun 1" },
@@ -53,11 +45,14 @@ function formatLastLogged(overview: BodyOverview): string {
 
 export function BodyDashboard({ overview }: { overview: BodyOverview }) {
   const [logDialogOpen, setLogDialogOpen] = React.useState(false)
+  const [measurementDialogOpen, setMeasurementDialogOpen] = React.useState(false)
   const [chartView, setChartView] = React.useState<BodyChartView>("weight")
   const photoInputRef = React.useRef<HTMLInputElement>(null)
 
   const weight = overview.summaries.weight
   const activeSummary = overview.summaries[chartView]
+
+  const hasMeasurements = overview.measurements.some(m => m.value !== "–")
 
   return (
     <div className="flex flex-1 flex-col">
@@ -103,37 +98,53 @@ export function BodyDashboard({ overview }: { overview: BodyOverview }) {
               <CardTitle className="text-[12.5px] font-semibold">
                 Measurements
               </CardTitle>
-              <button
-                type="button"
-                className="text-[11px] text-primary hover:underline"
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2.5 text-[11px]"
+                onClick={() => setMeasurementDialogOpen(true)}
               >
                 Update
-              </button>
+              </Button>
             </CardHeader>
             <CardContent className="px-4">
-              <div className="divide-y divide-border/60">
-                {measurements.map((row) => (
-                  <div
-                    key={row.label}
-                    className="flex items-center justify-between py-1.5 text-xs"
+              {!hasMeasurements ? (
+                <div className="flex h-32 flex-col items-center justify-center rounded-lg border border-dashed border-border/60 bg-muted/20 text-center">
+                  <p className="text-xs text-muted-foreground">No data yet</p>
+                  <Button 
+                    variant="link" 
+                    size="sm" 
+                    className="mt-1 h-auto p-0 text-[11px] text-primary"
+                    onClick={() => setMeasurementDialogOpen(true)}
                   >
-                    <span className="text-muted-foreground">{row.label}</span>
-                    <span>
-                      <span className="font-medium">{row.value}</span>
-                      <span
-                        className={cn(
-                          "ml-1.5 text-[10.5px]",
-                          row.positive === true && "text-emerald-600",
-                          row.positive === false && "text-orange-600",
-                          row.positive === null && "text-muted-foreground"
-                        )}
-                      >
-                        {row.delta}
+                    Log your first measurement
+                  </Button>
+                </div>
+              ) : (
+                <div className="divide-y divide-border/60">
+                  {overview.measurements.map((row) => (
+                    <div
+                      key={row.label}
+                      className="flex items-center justify-between py-1.5 text-xs"
+                    >
+                      <span className="text-muted-foreground">{row.label}</span>
+                      <span>
+                        <span className="font-medium">{row.value}</span>
+                        <span
+                          className={cn(
+                            "ml-1.5 text-[10.5px]",
+                            row.positive === true && "text-emerald-600",
+                            row.positive === false && "text-orange-600",
+                            row.positive === null && "text-muted-foreground"
+                          )}
+                        >
+                          {row.delta}
+                        </span>
                       </span>
-                    </span>
-                  </div>
-                ))}
-              </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -196,6 +207,11 @@ export function BodyDashboard({ overview }: { overview: BodyOverview }) {
         previousDate={weight.previousDate}
         delta={weight.delta}
         week={weight.week}
+      />
+
+      <MeasurementLogDialog
+        open={measurementDialogOpen}
+        onOpenChange={setMeasurementDialogOpen}
       />
     </div>
   )

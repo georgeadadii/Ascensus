@@ -21,6 +21,7 @@ model User {
   
   userBaseline  UserBaseline?
   bodyMetrics   BodyMetric[]
+  measurements  Measurement[]
 
   @@unique([email])
   @@map("user")
@@ -103,6 +104,25 @@ model BodyMetric {
 
   // One entry per user per day — lets us upsert "today's" log instead of
   // inserting a duplicate row when a metric is logged again the same day.
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model Measurement {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  date      DateTime
+  waist     Float?
+  chest     Float?
+  hips      Float?
+  leftArm   Float?
+  rightArm  Float?
+  leftLeg   Float?
+  rightLeg  Float?
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, date])
   @@index([userId, date])
 }
