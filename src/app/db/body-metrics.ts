@@ -48,12 +48,7 @@ export type BodyOverview = {
   measurements: MeasurementSummary[]
 }
 
-const FIELDS: BodyMetricField[] = [
-  "weight",
-  "bodyFat",
-  "muscleMass",
-  "leanMass",
-]
+const FIELDS: BodyMetricField[] = ["weight", "bodyFat", "muscleMass", "leanMass"]
 
 const MEASUREMENT_FIELDS: { field: MeasurementField; label: string }[] = [
   { field: "waist", label: "Waist" },

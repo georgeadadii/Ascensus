@@ -34,9 +34,7 @@ export function MeasurementLogDialog({
   open,
   onOpenChange,
 }: MeasurementLogDialogProps) {
-  const [values, setValues] = React.useState<
-    Record<MeasurementField, string>
-  >({
+  const [values, setValues] = React.useState<Record<MeasurementField, string>>({
     waist: "",
     chest: "",
     hips: "",

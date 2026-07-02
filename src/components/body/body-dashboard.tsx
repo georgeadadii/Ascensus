@@ -45,14 +45,15 @@ function formatLastLogged(overview: BodyOverview): string {
 
 export function BodyDashboard({ overview }: { overview: BodyOverview }) {
   const [logDialogOpen, setLogDialogOpen] = React.useState(false)
-  const [measurementDialogOpen, setMeasurementDialogOpen] = React.useState(false)
+  const [measurementDialogOpen, setMeasurementDialogOpen] =
+    React.useState(false)
   const [chartView, setChartView] = React.useState<BodyChartView>("weight")
   const photoInputRef = React.useRef<HTMLInputElement>(null)
 
   const weight = overview.summaries.weight
   const activeSummary = overview.summaries[chartView]
 
-  const hasMeasurements = overview.measurements.some(m => m.value !== "–")
+  const hasMeasurements = overview.measurements.some((m) => m.value !== "–")
 
   return (
     <div className="flex flex-1 flex-col">
@@ -111,9 +112,9 @@ export function BodyDashboard({ overview }: { overview: BodyOverview }) {
               {!hasMeasurements ? (
                 <div className="flex h-32 flex-col items-center justify-center rounded-lg border border-dashed border-border/60 bg-muted/20 text-center">
                   <p className="text-xs text-muted-foreground">No data yet</p>
-                  <Button 
-                    variant="link" 
-                    size="sm" 
+                  <Button
+                    variant="link"
+                    size="sm"
                     className="mt-1 h-auto p-0 text-[11px] text-primary"
                     onClick={() => setMeasurementDialogOpen(true)}
                   >
