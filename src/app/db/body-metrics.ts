@@ -171,9 +171,7 @@ export async function getBodyOverview(userId: string): Promise<BodyOverview> {
       const val = latestM?.[field]
       const prev = previousM?.[field]
       const delta =
-        val != null && prev != null
-          ? Math.round((val - prev) * 100) / 100
-          : null
+        val != null && prev != null ? Math.round((val - prev) * 100) / 100 : null
 
       return {
         label,
