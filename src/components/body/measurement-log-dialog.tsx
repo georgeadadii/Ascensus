@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { logMeasurements } from "@/app/body/actions"
 import type { MeasurementField } from "@/app/db/body-metrics"
+import type { LogMeasurementInput } from "@/app/body/actions"
 
 type MeasurementLogDialogProps = {
   open: boolean
@@ -65,8 +66,11 @@ export function MeasurementLogDialog({
   }
 
   function handleSave() {
-    const input: any = {}
-    for (const [f, v] of Object.entries(values)) {
+    const input = {} as LogMeasurementInput
+    for (const [f, v] of Object.entries(values) as [
+      MeasurementField,
+      string,
+    ][]) {
       if (v.trim() !== "") {
         const parsed = Number.parseFloat(v)
         if (!Number.isFinite(parsed)) {

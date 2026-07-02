@@ -26,6 +26,7 @@ const chartItems: { value: BodyChartView; label: string }[] = [
   { value: "weight", label: "Weight" },
   { value: "bodyFat", label: "Body fat" },
   { value: "muscleMass", label: "Muscle mass" },
+  { value: "leanMass", label: "Lean mass" },
 ]
 
 function formatLastLogged(overview: BodyOverview): string {
@@ -53,7 +54,6 @@ export function BodyDashboard({ overview }: { overview: BodyOverview }) {
   const photoInputRef = React.useRef<HTMLInputElement>(null)
 
   const weight = overview.summaries.weight
-  // const activeSummary = overview.summaries[chartView]
 
   const hasMeasurements = overview.measurements.some((m) => m.value !== "–")
 
@@ -90,14 +90,11 @@ export function BodyDashboard({ overview }: { overview: BodyOverview }) {
               setSelectedViews((current) => {
                 const isSelected = current.includes(metric)
                 if (isSelected) {
-                  // Never allow zero selected metrics.
                   if (current.length === 1) {
                     return current
                   }
-                  // Remove the metric while preserving the order of the remaining metrics.
                   return current.filter((m) => m !== metric)
                 }
-                // Append newly selected metrics so selection order is preserved.
                 return [...current, metric]
               })
             }}
@@ -170,13 +167,14 @@ export function BodyDashboard({ overview }: { overview: BodyOverview }) {
               <CardTitle className="text-[12.5px] font-semibold">
                 Progress photos
               </CardTitle>
-              <button
+              <Button
+                variant="outline"
                 type="button"
                 onClick={() => photoInputRef.current?.click()}
-                className="text-[11px] text-primary hover:underline"
+                className="text-[11px] text-primary text-primary"
               >
                 Upload
-              </button>
+              </Button>
             </CardHeader>
             <CardContent className="px-4">
               <input
@@ -185,7 +183,7 @@ export function BodyDashboard({ overview }: { overview: BodyOverview }) {
                 accept="image/*"
                 className="hidden"
               />
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-4 gap-1.5">
                 {progressPhotos.map((photo) => (
                   <div
                     key={photo.label}
