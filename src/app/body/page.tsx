@@ -24,14 +24,9 @@ export default async function BodyPage() {
   const session = await auth.api.getSession({
     headers: await headers(),
   })
-
-  if (!session) {
-    redirect("/login")
-  }
-
   const user = await getCurrentUser()
 
-  if (!user) {
+  if (!session || !user) {
     redirect("/login")
   }
 
