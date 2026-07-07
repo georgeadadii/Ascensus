@@ -17,6 +17,7 @@ export type SearchFoodsResult =
   { ok: true; results: FoodSearchResponse } | { ok: false; error: string }
 
 export type LogFoodResult = { ok: true } | { ok: false; error: string }
+export type DeleteFoodResult = { ok: true } | { ok: false; error: string }
 
 function parseField(
   input: NutritionGoalValues,
@@ -104,5 +105,32 @@ export async function logFoodEntry(
       error:
         error instanceof Error ? error.message : "Unable to save that entry.",
     }
+  }
+}
+
+export async function deleteFoodEntry(
+  entryId: string
+): Promise<DeleteFoodResult> {
+  const session = await auth.api.getSession({ headers: await headers() })
+  if (!session?.user) {
+    return { ok: false, error: "You must be signed in to delete food." }
+  }
+
+  try {
+    const result = await prisma.nutritionEntry.deleteMany({
+      where: {
+        id: entryId,
+        userId: session.user.id,
+      },
+    })
+
+    if (result.count === 0) {
+      return { ok: false, error: "That food entry could not be found." }
+    }
+
+    revalidatePath("/nutrition")
+    return { ok: true }
+  } catch {
+    return { ok: false, error: "Unable to delete that entry." }
   }
 }

@@ -21,20 +21,16 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import { MEAL_OPTIONS, mealLabel } from "@/lib/nutrition/meals"
 import type { MealType } from "@/lib/database/generated/enums"
 import type { FoodSearchResult } from "@/lib/nutrition/types"
 
 type LogFoodDialogProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
+  initialMeal?: MealType
+  selectedDateKey: string
 }
-
-const MEAL_OPTIONS: { value: MealType; label: string }[] = [
-  { value: "BREAKFAST", label: "Breakfast" },
-  { value: "LUNCH", label: "Lunch" },
-  { value: "DINNER", label: "Dinner" },
-  { value: "SNACK", label: "Snacks" },
-]
 
 function formatNumber(value: number) {
   return Number.isInteger(value)
@@ -42,10 +38,6 @@ function formatNumber(value: number) {
     : value.toLocaleString(undefined, {
         maximumFractionDigits: 1,
       })
-}
-
-function mealLabel(meal: MealType) {
-  return MEAL_OPTIONS.find((option) => option.value === meal)?.label ?? "Meal"
 }
 
 function sameFood(a: FoodSearchResult | null, b: FoodSearchResult) {
@@ -184,10 +176,15 @@ function FoodResultRow({
   )
 }
 
-export function LogFoodDialog({ open, onOpenChange }: LogFoodDialogProps) {
+export function LogFoodDialog({
+  open,
+  onOpenChange,
+  initialMeal = "LUNCH",
+  selectedDateKey,
+}: LogFoodDialogProps) {
   const router = useRouter()
   const [query, setQuery] = React.useState("")
-  const [meal, setMeal] = React.useState<MealType>("LUNCH")
+  const [meal, setMeal] = React.useState<MealType>(initialMeal)
   const [quantity, setQuantity] = React.useState("100")
   const [selectedFood, setSelectedFood] =
     React.useState<FoodSearchResult | null>(null)
@@ -205,7 +202,7 @@ export function LogFoodDialog({ open, onOpenChange }: LogFoodDialogProps) {
     setWasOpen(open)
     if (open) {
       setQuery("")
-      setMeal("LUNCH")
+      setMeal(initialMeal)
       setQuantity("100")
       setSelectedFood(null)
       setPreviouslyLogged([])
@@ -271,6 +268,7 @@ export function LogFoodDialog({ open, onOpenChange }: LogFoodDialogProps) {
     startTransition(async () => {
       const result = await logFoodEntry({
         meal,
+        dateKey: selectedDateKey,
         quantityG: quantityNumber,
         selectedFood,
       })

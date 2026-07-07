@@ -34,6 +34,7 @@ export type FoodSearchResponse = {
 
 export type LogFoodInput = {
   meal: MealType
+  dateKey: string
   quantityG: number
   selectedFood: FoodSearchResult
 }

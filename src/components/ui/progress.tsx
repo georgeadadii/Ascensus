@@ -56,7 +56,7 @@ function ProgressValue({
 
   return (
     <span className={cn("text-muted-foreground", className)} {...props}>
-      {children ?? `${value}%`}
+      {children ?? `${Number.isInteger(value) ? value : value.toFixed(1)}%`}
     </span>
   )
 }

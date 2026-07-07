@@ -1,5 +1,6 @@
 import type { MealType } from "@/lib/database/generated/enums"
 import { prisma } from "@/lib/database/prisma"
+import { parseDateKey } from "@/lib/nutrition/date"
 import type { FoodSearchResult, LogFoodInput } from "@/lib/nutrition/types"
 
 const VALID_MEALS: MealType[] = ["BREAKFAST", "LUNCH", "DINNER", "SNACK"]
@@ -114,6 +115,11 @@ export async function logFoodForUser(userId: string, input: LogFoodInput) {
     throw new Error("Select a valid meal.")
   }
 
+  const selectedDate = parseDateKey(input.dateKey)
+  if (!selectedDate) {
+    throw new Error("Select a valid date.")
+  }
+
   const food = await resolveFoodRecord(input.selectedFood)
   const multiplier = quantityG / 100
 
@@ -121,7 +127,7 @@ export async function logFoodForUser(userId: string, input: LogFoodInput) {
     data: {
       userId,
       foodId: food.id,
-      date: new Date(),
+      date: selectedDate,
       meal: input.meal,
       quantityG: roundToTwo(quantityG),
       foodName: food.name,

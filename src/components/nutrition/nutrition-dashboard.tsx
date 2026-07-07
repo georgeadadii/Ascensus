@@ -7,12 +7,15 @@ import { NutritionCard } from "@/components/nutrition/nutrition-cards"
 import { CaloriesCard } from "@/components/nutrition/calories-card"
 import { MacrosCard } from "@/components/nutrition/macros-card"
 import { EditGoalsDialog } from "@/components/nutrition/edit-goals-dialog"
+import { DailyMealLog } from "@/components/nutrition/daily-meal-log"
+import { NutritionDaySwitcher } from "@/components/nutrition/nutrition-day-switcher"
 import { Button } from "../ui/button"
 import { SlidersHorizontal, Utensils } from "lucide-react"
 import type { NutritionOverview } from "@/types/nutrition"
 
 type NutritionDashboardProps = {
   initialOverview: NutritionOverview
+  selectedDateKey: string
 }
 
 function formatNumber(value: number) {
@@ -34,6 +37,7 @@ function toPercent(current: number, goal: number) {
 
 export function NutritionDashboard({
   initialOverview,
+  selectedDateKey,
 }: NutritionDashboardProps) {
   const [goals, setGoals] = React.useState(initialOverview.goals)
   const [editGoalsOpen, setEditGoalsOpen] = React.useState(false)
@@ -47,27 +51,37 @@ export function NutritionDashboard({
     setGoals(initialOverview.goals)
   }
 
+  const SODIUM_REFERENCE_INTAKE = 2
+  const SUGAR_REFERENCE_INTAKE = 90
+  const CHOLESTEROL_REFERENCE_INTAKE = 0.3
+
   return (
     <div className="flex flex-1 flex-col">
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/60 px-6 py-3.5">
-        <div>
+      <div className="grid grid-cols-3 items-center gap-4 border-b border-border/60 px-6 py-3.5">
+        <div className="justify-self-start flex flex-col gap-0.5">
           <h1 className="text-[15px] font-semibold">Nutrition</h1>
           <p className="text-[11.5px] text-muted-foreground">
             Track daily intake, macros, hydration, and nutrition habits.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex justify-center">
+          <NutritionDaySwitcher selectedDateKey={selectedDateKey} />
+        </div>
+
+        <div className="flex justify-self-end items-center gap-2">
+          <Button size="sm" onClick={() => setLogFoodOpen(true)}>
+            <Utensils />
+            Log Food
+          </Button>
           <Button
             variant="outline"
             size="sm"
+            className="w-full sm:w-auto"
             onClick={() => setEditGoalsOpen(true)}
           >
             <SlidersHorizontal />
             Edit Goals
-          </Button>
-          <Button size="sm" onClick={() => setLogFoodOpen(true)}>
-            <Utensils />
-            Log Food
           </Button>
         </div>
       </div>
@@ -122,12 +136,12 @@ export function NutritionDashboard({
             title="Sodium"
             progressLabel={formatGoal(
               initialOverview.totals.sodium,
-              goals.sodium,
+              goals.sodium ? goals.sodium : SODIUM_REFERENCE_INTAKE,
               "g"
             )}
             progressValue={toPercent(
               initialOverview.totals.sodium,
-              goals.sodium
+              goals.sodium ? goals.sodium : SODIUM_REFERENCE_INTAKE
             )}
           />
 
@@ -135,25 +149,37 @@ export function NutritionDashboard({
             title="Sugar"
             progressLabel={formatGoal(
               initialOverview.totals.sugar,
-              goals.sugar,
+              goals.sugar ? goals.sugar : SUGAR_REFERENCE_INTAKE,
               "g"
             )}
-            progressValue={toPercent(initialOverview.totals.sugar, goals.sugar)}
+            progressValue={toPercent(
+              initialOverview.totals.sugar,
+              goals.sugar ? goals.sugar : SUGAR_REFERENCE_INTAKE
+            )}
           />
 
           <NutritionCard
             title="Cholesterol"
             progressLabel={formatGoal(
               initialOverview.totals.cholesterol,
-              goals.cholesterol,
+              goals.cholesterol
+                ? goals.cholesterol
+                : CHOLESTEROL_REFERENCE_INTAKE,
               "mg"
             )}
             progressValue={toPercent(
               initialOverview.totals.cholesterol,
               goals.cholesterol
+                ? goals.cholesterol
+                : CHOLESTEROL_REFERENCE_INTAKE
             )}
           />
         </section>
+
+        <DailyMealLog
+          meals={initialOverview.meals}
+          selectedDateKey={selectedDateKey}
+        />
       </div>
 
       <EditGoalsDialog
@@ -162,7 +188,11 @@ export function NutritionDashboard({
         goals={goals}
         onSaved={(nextGoals) => setGoals(nextGoals)}
       />
-      <LogFoodDialog open={logFoodOpen} onOpenChange={setLogFoodOpen} />
+      <LogFoodDialog
+        open={logFoodOpen}
+        onOpenChange={setLogFoodOpen}
+        selectedDateKey={selectedDateKey}
+      />
     </div>
   )
 }

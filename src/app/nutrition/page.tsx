@@ -19,8 +19,9 @@ import { auth } from "@/lib/auth/auth"
 import { headers } from "next/headers"
 import { redirect } from "next/navigation"
 import { NutritionDashboard } from "@/components/nutrition/nutrition-dashboard"
+import { resolveDateKey } from "@/lib/nutrition/date"
 
-export default async function NutritionPage() {
+export default async function NutritionPage(props: PageProps<"/nutrition">) {
   const session = await auth.api.getSession({
     headers: await headers(),
   })
@@ -30,7 +31,9 @@ export default async function NutritionPage() {
     redirect("/login")
   }
 
-  const overview = await getNutritionOverview(user.id)
+  const searchParams = await props.searchParams
+  const selectedDateKey = resolveDateKey(searchParams.date)
+  const overview = await getNutritionOverview(user.id, selectedDateKey)
 
   return (
     <SidebarProvider>
@@ -58,8 +61,10 @@ export default async function NutritionPage() {
             </Breadcrumb>
           </div>
         </header>
-
-        <NutritionDashboard initialOverview={overview} />
+        <NutritionDashboard
+          initialOverview={overview}
+          selectedDateKey={selectedDateKey}
+        />
       </SidebarInset>
     </SidebarProvider>
   )

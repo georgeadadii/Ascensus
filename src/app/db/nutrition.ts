@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/database/prisma"
+import { getDayRangeForDateKey, todayDateKey } from "@/lib/nutrition/date"
+import { MEAL_ORDER } from "@/lib/nutrition/meals"
 import type {
   NutritionGoalValues,
+  NutritionMealSection,
   NutritionOverview,
   NutritionTotals,
 } from "@/types/nutrition"
@@ -35,15 +38,12 @@ function roundNumber(value: number | null | undefined) {
 }
 
 export async function getNutritionOverview(
-  userId: string
+  userId: string,
+  dateKey = todayDateKey()
 ): Promise<NutritionOverview> {
-  const startOfDay = new Date()
-  startOfDay.setHours(0, 0, 0, 0)
+  const { start: startOfDay, end: endOfDay } = getDayRangeForDateKey(dateKey)
 
-  const endOfDay = new Date(startOfDay)
-  endOfDay.setDate(endOfDay.getDate() + 1)
-
-  const [goal, entryTotals, waterTotals] = await Promise.all([
+  const [goal, entryTotals, waterTotals, entries] = await Promise.all([
     prisma.nutritionGoal.findUnique({
       where: { userId },
       select: {
@@ -89,7 +89,71 @@ export async function getNutritionOverview(
         amount: true,
       },
     }),
+    prisma.nutritionEntry.findMany({
+      where: {
+        userId,
+        date: {
+          gte: startOfDay,
+          lt: endOfDay,
+        },
+      },
+      select: {
+        id: true,
+        meal: true,
+        foodName: true,
+        brand: true,
+        quantityG: true,
+        calories: true,
+        protein: true,
+        carbs: true,
+        fat: true,
+        createdAt: true,
+      },
+      orderBy: [{ createdAt: "asc" }, { id: "asc" }],
+    }),
   ])
+
+  const mealsByType = new Map(
+    MEAL_ORDER.map(
+      (meal): [NutritionMealSection["meal"], NutritionMealSection] => [
+        meal,
+        {
+          meal,
+          entries: [],
+          totals: {
+            calories: 0,
+            protein: 0,
+            carbs: 0,
+            fat: 0,
+          },
+        },
+      ]
+    )
+  )
+
+  for (const entry of entries) {
+    const section = mealsByType.get(entry.meal)
+    if (!section) continue
+
+    section.entries.push({
+      id: entry.id,
+      meal: entry.meal,
+      foodName: entry.foodName,
+      brand: entry.brand,
+      quantityG: roundNumber(entry.quantityG),
+      calories: roundNumber(entry.calories),
+      protein: roundNumber(entry.protein),
+      carbs: roundNumber(entry.carbs),
+      fat: roundNumber(entry.fat),
+    })
+
+    section.totals.calories = roundNumber(
+      section.totals.calories + entry.calories
+    )
+    section.totals.protein = roundNumber(section.totals.protein + entry.protein)
+    section.totals.carbs = roundNumber(section.totals.carbs + entry.carbs)
+    section.totals.fat = roundNumber(section.totals.fat + entry.fat)
+  }
 
   return {
     goals: {
@@ -114,5 +178,6 @@ export async function getNutritionOverview(
       sugar: roundNumber(entryTotals._sum.sugar),
       cholesterol: roundNumber(entryTotals._sum.cholesterol),
     },
+    meals: MEAL_ORDER.map((meal) => mealsByType.get(meal)!),
   }
 }
