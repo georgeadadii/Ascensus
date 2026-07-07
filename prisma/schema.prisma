@@ -18,10 +18,13 @@ model User {
   updatedAt     DateTime  @updatedAt
   sessions      Session[]
   accounts      Account[]
-  
-  userBaseline  UserBaseline?
-  bodyMetrics   BodyMetric[]
-  measurements  Measurement[]
+
+  userBaseline     UserBaseline?
+  bodyMetrics      BodyMetric[]
+  measurements     Measurement[]
+  nutritionGoal    NutritionGoal?
+  nutritionEntries NutritionEntry[]
+  waterLogs        WaterLog[]
 
   @@unique([email])
   @@map("user")
@@ -76,16 +79,16 @@ model Verification {
 }
 
 model UserBaseline {
-  id              String   @id @default(cuid())
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  initialWeight   Float
-  initialBodyFat  Float?
-  height          Float
-  targetWeight    Float?
-  activityLevel   String?
-  userId          String   @unique @map("user_id")
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             String   @id @default(cuid())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  initialWeight  Float
+  initialBodyFat Float?
+  height         Float
+  targetWeight   Float?
+  activityLevel  String?
+  userId         String   @unique @map("user_id")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model BodyMetric {
@@ -124,5 +127,132 @@ model Measurement {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, date])
+  @@index([userId, date])
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
+model NutritionGoal {
+  id String @id @default(cuid())
+
+  calories Int
+
+  protein Float
+  carbs   Float
+  fat     Float
+  fibre   Float
+
+  sugar       Float?
+  sodium      Float?
+  cholesterol Float?
+
+  water Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Food {
+  id String @id @default(cuid())
+
+  externalSource String?
+  externalId     String?
+  barcode        String? @unique
+
+  name  String
+  brand String?
+
+  servingSize Float?
+  servingUnit String?
+
+  caloriesPer100g Float
+  proteinPer100g  Float
+  carbsPer100g    Float
+  fatPer100g      Float
+  fibrePer100g    Float?
+
+  sugarPer100g        Float?
+  sodiumPer100g       Float?
+  cholesterolPer100g  Float?
+  saturatedFatPer100g Float?
+  saltPer100g         Float?
+
+  imageUrl String?
+
+  nutritionGrade String?
+  novaGroup      Int?
+  ingredients    String?
+  allergens      String[] @default([])
+
+  verified Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entries NutritionEntry[]
+
+  @@unique([externalSource, externalId])
+  @@index([name])
+  @@index([brand])
+}
+
+model NutritionEntry {
+  id String @id @default(cuid())
+
+  date DateTime
+
+  meal MealType
+
+  quantityG Float
+
+  foodName String
+  brand    String?
+  barcode  String?
+
+  calories Float
+  protein  Float
+  carbs    Float
+  fat      Float
+  fibre    Float?
+
+  sugar       Float?
+  sodium      Float?
+  cholesterol Float?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  foodId String?
+  food   Food?   @relation(fields: [foodId], references: [id], onDelete: SetNull)
+
+  @@index([userId, date])
+  @@index([date])
+}
+
+model WaterLog {
+  id String @id @default(cuid())
+
+  amount Float
+
+  date DateTime
+
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId, date])
 }
