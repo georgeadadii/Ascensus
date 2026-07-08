@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "prisma:validate": "prisma validate",
     "prisma:generate": "prisma generate",
-    "prepare": "husky"
+    "prepare": "husky",
+    "import:exercises": "tsx scripts/import-api-ninjas-exercises.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
