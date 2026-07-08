@@ -14,6 +14,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
+import { getExercisePickerOptions } from "@/app/db/exercises"
 import { getTrainingOverview } from "@/app/db/training"
 import { getCurrentUser } from "@/app/db/users"
 import { auth } from "@/lib/auth/auth"
@@ -30,7 +31,10 @@ export default async function TrainingPage() {
     redirect("/login")
   }
 
-  const overview = await getTrainingOverview(user.id)
+  const [overview, exerciseOptions] = await Promise.all([
+    getTrainingOverview(user.id),
+    getExercisePickerOptions(user.id),
+  ])
 
   return (
     <SidebarProvider>
@@ -60,7 +64,10 @@ export default async function TrainingPage() {
           </div>
         </header>
 
-        <TrainingDashboard overview={overview} />
+        <TrainingDashboard
+          overview={overview}
+          exerciseOptions={exerciseOptions}
+        />
       </SidebarInset>
     </SidebarProvider>
   )

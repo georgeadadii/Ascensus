@@ -1,6 +1,9 @@
-import { Dumbbell, Layers3, Play } from "lucide-react"
+import { Layers3 } from "lucide-react"
 
+import type { ExercisePickerOption } from "@/app/db/exercises"
 import type { TrainingOverview } from "@/app/db/training"
+import { ExercisePickerDialog } from "@/components/training/exercise-picker-dialog"
+import { StartWorkoutDialog } from "@/components/training/start-workout-dialog"
 import { TrainingPersonalRecordCard } from "@/components/training/training-personal-record-card"
 import { TrainingRecentWorkoutsCard } from "@/components/training/training-recent-workouts-card"
 import { TrainingTemplatesCard } from "@/components/training/training-templates-card"
@@ -9,6 +12,7 @@ import { Button } from "@/components/ui/button"
 
 type TrainingDashboardProps = {
   overview: TrainingOverview
+  exerciseOptions: ExercisePickerOption[]
 }
 
 function formatShortDate(value: string) {
@@ -27,7 +31,10 @@ function buildTrainingSummary(overview: TrainingOverview) {
   return `Last workout: ${formatShortDate(latest.startedAt)}`
 }
 
-export function TrainingDashboard({ overview }: TrainingDashboardProps) {
+export function TrainingDashboard({
+  overview,
+  exerciseOptions,
+}: TrainingDashboardProps) {
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/60 px-6 py-3.5">
@@ -43,14 +50,8 @@ export function TrainingDashboard({ overview }: TrainingDashboardProps) {
             <Layers3 />
             Templates
           </Button>
-          <Button variant="outline" size="sm" className="w-full sm:w-auto">
-            <Dumbbell />
-            Exercises
-          </Button>
-          <Button size="sm" className="w-full sm:w-auto">
-            <Play />
-            Start workout
-          </Button>
+          <ExercisePickerDialog options={exerciseOptions} />
+          <StartWorkoutDialog />
         </div>
       </div>
 
