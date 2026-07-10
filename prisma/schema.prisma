@@ -305,7 +305,7 @@ model Exercise {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([source, name])
+  @@unique([source, name, userId])
   @@index([name])
   @@index([userId])
   @@index([primaryMuscle])

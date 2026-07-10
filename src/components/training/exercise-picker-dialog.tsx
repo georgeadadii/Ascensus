@@ -1,19 +1,23 @@
 "use client"
 
 import * as React from "react"
-import { Dumbbell, Search } from "lucide-react"
+import { Dumbbell, LoaderCircle, Plus, Search } from "lucide-react"
 
 import type { ExercisePickerOption } from "@/app/db/exercises"
+import { createCustomExercise } from "@/app/training/actions"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 
 type ExercisePickerDialogProps = {
@@ -23,6 +27,22 @@ type ExercisePickerDialogProps = {
   onSelect?: (
     option: ExercisePickerOption
   ) => void | boolean | Promise<void | boolean>
+}
+
+type CustomExerciseFormState = {
+  name: string
+  primaryMuscle: string
+  equipment: string
+  difficulty: string
+  instructions: string
+}
+
+type CustomExerciseFieldErrors = {
+  name?: string
+  primaryMuscle?: string
+  equipment?: string
+  difficulty?: string
+  instructions?: string
 }
 
 function isUsedExercise(
@@ -38,6 +58,40 @@ function matchesQuery(option: ExercisePickerOption, query: string) {
   return [option.name, option.primaryMuscle, option.equipment].some((value) =>
     value?.toLowerCase().includes(normalizedQuery)
   )
+}
+
+function sortOptions(options: ExercisePickerOption[]) {
+  return [...options].sort((left, right) => {
+    const leftUsed = isUsedExercise(left)
+    const rightUsed = isUsedExercise(right)
+
+    if (leftUsed && rightUsed) {
+      if (left.lastUsedAt !== right.lastUsedAt) {
+        return right.lastUsedAt.localeCompare(left.lastUsedAt)
+      }
+      if (left.timesUsed !== right.timesUsed) {
+        return right.timesUsed - left.timesUsed
+      }
+      return left.name.localeCompare(right.name)
+    }
+
+    if (leftUsed) return -1
+    if (rightUsed) return 1
+
+    return left.name.localeCompare(right.name)
+  })
+}
+
+function buildInitialCustomExerciseForm(
+  query: string
+): CustomExerciseFormState {
+  return {
+    name: query,
+    primaryMuscle: "",
+    equipment: "",
+    difficulty: "",
+    instructions: "",
+  }
 }
 
 function formatWeight(value: number) {
@@ -107,15 +161,116 @@ export function ExercisePickerDialog({
   onSelect,
 }: ExercisePickerDialogProps) {
   const [open, setOpen] = React.useState(false)
+  const [createOpen, setCreateOpen] = React.useState(false)
   const [query, setQuery] = React.useState("")
+  const [createdOptions, setCreatedOptions] = React.useState<
+    ExercisePickerOption[]
+  >([])
   const [pendingExerciseId, setPendingExerciseId] = React.useState<
     string | null
   >(null)
+  const [customExerciseForm, setCustomExerciseForm] =
+    React.useState<CustomExerciseFormState>(() =>
+      buildInitialCustomExerciseForm("")
+    )
+  const [customExerciseError, setCustomExerciseError] = React.useState<
+    string | null
+  >(null)
+  const [customExerciseFieldErrors, setCustomExerciseFieldErrors] =
+    React.useState<CustomExerciseFieldErrors>({})
+  const [isCreatingCustomExercise, startCreateTransition] =
+    React.useTransition()
   const deferredQuery = React.useDeferredValue(query.trim())
 
-  const filteredOptions = options.filter((option) =>
+  const mergedOptions = React.useMemo(
+    () =>
+      sortOptions(
+        [...options, ...createdOptions].filter(
+          (option, index, allOptions) =>
+            allOptions.findIndex((candidate) => candidate.id === option.id) ===
+            index
+        )
+      ),
+    [createdOptions, options]
+  )
+
+  const filteredOptions = mergedOptions.filter((option) =>
     matchesQuery(option, deferredQuery)
   )
+
+  function resetCustomExerciseForm(nextName = query.trim()) {
+    setCustomExerciseForm(buildInitialCustomExerciseForm(nextName))
+    setCustomExerciseError(null)
+    setCustomExerciseFieldErrors({})
+  }
+
+  async function handleExerciseSelect(option: ExercisePickerOption) {
+    if (!onSelect) return
+
+    setPendingExerciseId(option.id)
+    try {
+      const result = await onSelect(option)
+      if (result !== false) {
+        setOpen(false)
+      }
+    } finally {
+      setPendingExerciseId(null)
+    }
+  }
+
+  function handleCreateDialogChange(nextOpen: boolean) {
+    setCreateOpen(nextOpen)
+    if (nextOpen) {
+      resetCustomExerciseForm()
+      return
+    }
+
+    setCustomExerciseError(null)
+    setCustomExerciseFieldErrors({})
+  }
+
+  function updateCustomExerciseForm<
+    Field extends keyof CustomExerciseFormState,
+  >(field: Field, value: CustomExerciseFormState[Field]) {
+    setCustomExerciseForm((currentForm) => ({
+      ...currentForm,
+      [field]: value,
+    }))
+    setCustomExerciseFieldErrors((currentErrors) => ({
+      ...currentErrors,
+      [field]: undefined,
+    }))
+  }
+
+  function handleCustomExerciseSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setCustomExerciseError(null)
+    setCustomExerciseFieldErrors({})
+
+    startCreateTransition(async () => {
+      const result = await createCustomExercise(customExerciseForm)
+
+      if (!result.ok) {
+        setCustomExerciseError(result.error)
+        setCustomExerciseFieldErrors(result.fieldErrors ?? {})
+        return
+      }
+
+      setCreatedOptions((currentOptions) =>
+        sortOptions(
+          currentOptions.some((option) => option.id === result.exercise.id)
+            ? currentOptions
+            : [...currentOptions, result.exercise]
+        )
+      )
+      setQuery(result.exercise.name)
+      handleCreateDialogChange(false)
+
+      if (onSelect) {
+        await handleExerciseSelect(result.exercise)
+      }
+    })
+  }
 
   return (
     <Dialog
@@ -124,6 +279,7 @@ export function ExercisePickerDialog({
         setOpen(nextOpen)
         if (!nextOpen) {
           setQuery("")
+          handleCreateDialogChange(false)
         }
       }}
     >
@@ -189,13 +345,183 @@ export function ExercisePickerDialog({
             <div className="space-y-1">
               <p className="text-sm font-medium">No exercises found</p>
               <p className="text-sm text-muted-foreground">
-                Try a different search or add a custom exercise later.
+                Try a different search or create your own private exercise.
               </p>
             </div>
 
-            <Button type="button" variant="outline" disabled>
-              Create custom exercise
-            </Button>
+            <Dialog open={createOpen} onOpenChange={handleCreateDialogChange}>
+              <DialogTrigger asChild>
+                <Button type="button" variant="outline">
+                  <Plus />
+                  Create custom exercise
+                </Button>
+              </DialogTrigger>
+
+              <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Create custom exercise</DialogTitle>
+                  <DialogDescription>
+                    This exercise will only be visible in your own library.
+                  </DialogDescription>
+                </DialogHeader>
+
+                <form
+                  onSubmit={handleCustomExerciseSubmit}
+                  className="space-y-4"
+                >
+                  <div className="space-y-2">
+                    <Label htmlFor="custom-exercise-name">Name</Label>
+                    <Input
+                      id="custom-exercise-name"
+                      value={customExerciseForm.name}
+                      onChange={(event) =>
+                        updateCustomExerciseForm("name", event.target.value)
+                      }
+                      placeholder="e.g. Incline Smith Press"
+                      autoFocus
+                      required
+                      aria-invalid={Boolean(customExerciseFieldErrors.name)}
+                    />
+                    {customExerciseFieldErrors.name ? (
+                      <p className="text-sm text-destructive">
+                        {customExerciseFieldErrors.name}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="custom-exercise-primary-muscle">
+                        Primary muscle
+                      </Label>
+                      <Input
+                        id="custom-exercise-primary-muscle"
+                        value={customExerciseForm.primaryMuscle}
+                        onChange={(event) =>
+                          updateCustomExerciseForm(
+                            "primaryMuscle",
+                            event.target.value
+                          )
+                        }
+                        placeholder="Optional"
+                        aria-invalid={Boolean(
+                          customExerciseFieldErrors.primaryMuscle
+                        )}
+                      />
+                      {customExerciseFieldErrors.primaryMuscle ? (
+                        <p className="text-sm text-destructive">
+                          {customExerciseFieldErrors.primaryMuscle}
+                        </p>
+                      ) : null}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="custom-exercise-equipment">
+                        Equipment
+                      </Label>
+                      <Input
+                        id="custom-exercise-equipment"
+                        value={customExerciseForm.equipment}
+                        onChange={(event) =>
+                          updateCustomExerciseForm(
+                            "equipment",
+                            event.target.value
+                          )
+                        }
+                        placeholder="Optional"
+                        aria-invalid={Boolean(
+                          customExerciseFieldErrors.equipment
+                        )}
+                      />
+                      {customExerciseFieldErrors.equipment ? (
+                        <p className="text-sm text-destructive">
+                          {customExerciseFieldErrors.equipment}
+                        </p>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="custom-exercise-difficulty">
+                      Difficulty
+                    </Label>
+                    <Input
+                      id="custom-exercise-difficulty"
+                      value={customExerciseForm.difficulty}
+                      onChange={(event) =>
+                        updateCustomExerciseForm(
+                          "difficulty",
+                          event.target.value
+                        )
+                      }
+                      placeholder="Optional"
+                      aria-invalid={Boolean(
+                        customExerciseFieldErrors.difficulty
+                      )}
+                    />
+                    {customExerciseFieldErrors.difficulty ? (
+                      <p className="text-sm text-destructive">
+                        {customExerciseFieldErrors.difficulty}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="custom-exercise-instructions">
+                      Instructions
+                    </Label>
+                    <textarea
+                      id="custom-exercise-instructions"
+                      value={customExerciseForm.instructions}
+                      onChange={(event) =>
+                        updateCustomExerciseForm(
+                          "instructions",
+                          event.target.value
+                        )
+                      }
+                      placeholder="Optional"
+                      rows={5}
+                      aria-invalid={Boolean(
+                        customExerciseFieldErrors.instructions
+                      )}
+                      className={cn(
+                        "flex min-h-24 w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+                        customExerciseFieldErrors.instructions
+                          ? "border-destructive"
+                          : null
+                      )}
+                    />
+                    {customExerciseFieldErrors.instructions ? (
+                      <p className="text-sm text-destructive">
+                        {customExerciseFieldErrors.instructions}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {customExerciseError ? (
+                    <p className="text-sm text-destructive">
+                      {customExerciseError}
+                    </p>
+                  ) : null}
+
+                  <DialogFooter>
+                    <DialogClose asChild>
+                      <Button type="button" variant="outline">
+                        Cancel
+                      </Button>
+                    </DialogClose>
+                    <Button type="submit" disabled={isCreatingCustomExercise}>
+                      {isCreatingCustomExercise ? (
+                        <LoaderCircle className="animate-spin" />
+                      ) : (
+                        <Plus />
+                      )}
+                      Create exercise
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
           </div>
         )}
       </DialogContent>
