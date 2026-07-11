@@ -1,12 +1,10 @@
 import { prisma } from "@/lib/database/prisma"
+import {
+  getTrainingPersonalRecordSlots,
+  type TrainingPersonalRecordSlot,
+} from "@/app/db/personal-record-slots"
 
 const RECENT_WORKOUT_LIMIT = 5
-const PR_EXERCISE_NAMES = [
-  "Bench Press",
-  "Back Squat",
-  "Deadlift",
-  "Overhead Press",
-] as const
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
 type RecentWorkoutExercise = {
@@ -47,25 +45,7 @@ export type TrainingOverview = {
     workoutCount: number
     today: boolean
   }[]
-  personalRecords: {
-    exerciseName: (typeof PR_EXERCISE_NAMES)[number]
-    latest: {
-      id: string
-      weight: number
-      reps: number
-      estimatedOneRepMax: number | null
-      volume: number | null
-      achievedAt: string
-    } | null
-    highest: {
-      id: string
-      weight: number
-      reps: number
-      estimatedOneRepMax: number | null
-      volume: number | null
-      achievedAt: string
-    } | null
-  }[]
+  personalRecords: TrainingPersonalRecordSlot[]
 }
 
 function roundNumber(value: number | null | undefined) {
@@ -90,24 +70,6 @@ function endOfWeek(ref: Date): Date {
   const d = startOfWeek(ref)
   d.setUTCDate(d.getUTCDate() + 7)
   return d
-}
-
-function mapPersonalRecord(record: {
-  id: string
-  weight: number
-  reps: number
-  estimatedOneRepMax: number | null
-  volume: number | null
-  achievedAt: Date
-}) {
-  return {
-    id: record.id,
-    weight: roundNumber(record.weight),
-    reps: record.reps,
-    estimatedOneRepMax: record.estimatedOneRepMax,
-    volume: record.volume != null ? roundNumber(record.volume) : null,
-    achievedAt: record.achievedAt.toISOString(),
-  }
 }
 
 export async function getTrainingOverview(
@@ -190,36 +152,7 @@ export async function getTrainingOverview(
           totalVolume: true,
         },
       }),
-      prisma.personalRecord.findMany({
-        where: {
-          userId,
-          exercise: {
-            name: {
-              in: [...PR_EXERCISE_NAMES],
-            },
-          },
-        },
-        orderBy: [
-          { exercise: { name: "asc" } },
-          { weight: "desc" },
-          { estimatedOneRepMax: "desc" },
-          { achievedAt: "desc" },
-          { id: "desc" },
-        ],
-        select: {
-          id: true,
-          weight: true,
-          reps: true,
-          estimatedOneRepMax: true,
-          volume: true,
-          achievedAt: true,
-          exercise: {
-            select: {
-              name: true,
-            },
-          },
-        },
-      }),
+      getTrainingPersonalRecordSlots(userId),
     ])
 
   const weeklyVolumeMap = new Map<
@@ -252,22 +185,6 @@ export async function getTrainingOverview(
     }
   })
 
-  const latestPrMap = new Map<string, (typeof personalRecords)[number]>()
-  for (const record of [...personalRecords].sort((a, b) => {
-    return b.achievedAt.getTime() - a.achievedAt.getTime()
-  })) {
-    if (!latestPrMap.has(record.exercise.name)) {
-      latestPrMap.set(record.exercise.name, record)
-    }
-  }
-
-  const highestPrMap = new Map<string, (typeof personalRecords)[number]>()
-  for (const record of personalRecords) {
-    if (!highestPrMap.has(record.exercise.name)) {
-      highestPrMap.set(record.exercise.name, record)
-    }
-  }
-
   return {
     recentWorkouts: recentSessions.map((session) => ({
       id: session.id,
@@ -298,14 +215,6 @@ export async function getTrainingOverview(
       exerciseCount: template._count.exercises,
     })),
     weeklyVolume,
-    personalRecords: PR_EXERCISE_NAMES.map((exerciseName) => ({
-      exerciseName,
-      latest: latestPrMap.has(exerciseName)
-        ? mapPersonalRecord(latestPrMap.get(exerciseName)!)
-        : null,
-      highest: highestPrMap.has(exerciseName)
-        ? mapPersonalRecord(highestPrMap.get(exerciseName)!)
-        : null,
-    })),
+    personalRecords,
   }
 }

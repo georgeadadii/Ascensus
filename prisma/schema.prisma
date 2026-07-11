@@ -29,6 +29,7 @@ model User {
   workoutTemplates WorkoutTemplate[]
   workoutSessions  WorkoutSession[]
   personalRecords  PersonalRecord[]
+  personalRecordSlots PersonalRecordSlot[]
 
   @@unique([email])
   @@map("user")
@@ -301,6 +302,7 @@ model Exercise {
   templateExercises WorkoutTemplateExercise[]
   workoutExercises  WorkoutExercise[]
   personalRecords   PersonalRecord[]
+  personalRecordSlots PersonalRecordSlot[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -432,4 +434,22 @@ model PersonalRecord {
 
   @@index([userId, exerciseId])
   @@index([achievedAt])
+}
+
+model PersonalRecordSlot {
+  id         String @id @default(cuid())
+  userId     String
+  exerciseId String
+  slot       Int
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, slot])
+  @@unique([userId, exerciseId])
+  @@index([userId, slot])
+  @@index([exerciseId])
 }

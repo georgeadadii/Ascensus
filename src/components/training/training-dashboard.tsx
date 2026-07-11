@@ -4,7 +4,7 @@ import type { ExercisePickerOption } from "@/app/db/exercises"
 import type { TrainingOverview } from "@/app/db/training"
 import { ExercisePickerDialog } from "@/components/training/exercise-picker-dialog"
 import { StartWorkoutDialog } from "@/components/training/start-workout-dialog"
-import { TrainingPersonalRecordCard } from "@/components/training/training-personal-record-card"
+import { TrainingPersonalRecordsSection } from "@/components/training/training-personal-records-section"
 import { TrainingRecentWorkoutsCard } from "@/components/training/training-recent-workouts-card"
 import { TrainingTemplatesCard } from "@/components/training/training-templates-card"
 import { TrainingWeeklyVolumeCard } from "@/components/training/training-weekly-volume-card"
@@ -56,14 +56,10 @@ export function TrainingDashboard({
       </div>
 
       <div className="flex flex-1 flex-col gap-3.5 p-4 sm:p-[18px]">
-        <section className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
-          {overview.personalRecords.map((record) => (
-            <TrainingPersonalRecordCard
-              key={record.exerciseName}
-              record={record}
-            />
-          ))}
-        </section>
+        <TrainingPersonalRecordsSection
+          slots={overview.personalRecords}
+          exerciseOptions={exerciseOptions}
+        />
 
         <section className="grid gap-2.5 xl:grid-cols-2">
           <TrainingWeeklyVolumeCard weeklyVolume={overview.weeklyVolume} />

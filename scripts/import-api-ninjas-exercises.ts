@@ -259,44 +259,44 @@ async function main() {
       const existingExercise = existingByCanonicalName.get(canonicalName)
       const existedBeforeUpsert = Boolean(existingExercise)
 
-      const savedExercise = await prisma.exercise.upsert({
-        where: existingExercise
-          ? {
+      const savedExercise = existingExercise
+        ? await prisma.exercise.update({
+            where: {
               id: existingExercise.id,
-            }
-          : {
-              source_name: {
-                source: "API_NINJAS",
-                name: normalizedExercise.name,
-              },
             },
-        update: {
-          name: normalizedExercise.name,
-          category: normalizedExercise.category,
-          primaryMuscle: normalizedExercise.primaryMuscle,
-          equipment: normalizedExercise.equipment,
-          difficulty: normalizedExercise.difficulty,
-          instructions: normalizedExercise.instructions,
-          source: "API_NINJAS",
-          isCustom: false,
-          userId: null,
-        },
-        create: {
-          name: normalizedExercise.name,
-          category: normalizedExercise.category,
-          primaryMuscle: normalizedExercise.primaryMuscle,
-          equipment: normalizedExercise.equipment,
-          difficulty: normalizedExercise.difficulty,
-          instructions: normalizedExercise.instructions,
-          source: "API_NINJAS",
-          isCustom: false,
-          userId: null,
-        },
-        select: {
-          id: true,
-          name: true,
-        },
-      })
+            data: {
+              name: normalizedExercise.name,
+              category: normalizedExercise.category,
+              primaryMuscle: normalizedExercise.primaryMuscle,
+              equipment: normalizedExercise.equipment,
+              difficulty: normalizedExercise.difficulty,
+              instructions: normalizedExercise.instructions,
+              source: "API_NINJAS",
+              isCustom: false,
+              userId: null,
+            },
+            select: {
+              id: true,
+              name: true,
+            },
+          })
+        : await prisma.exercise.create({
+            data: {
+              name: normalizedExercise.name,
+              category: normalizedExercise.category,
+              primaryMuscle: normalizedExercise.primaryMuscle,
+              equipment: normalizedExercise.equipment,
+              difficulty: normalizedExercise.difficulty,
+              instructions: normalizedExercise.instructions,
+              source: "API_NINJAS",
+              isCustom: false,
+              userId: null,
+            },
+            select: {
+              id: true,
+              name: true,
+            },
+          })
 
       existingByCanonicalName.set(canonicalName, savedExercise)
 

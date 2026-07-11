@@ -24,9 +24,12 @@ type ExercisePickerDialogProps = {
   options: ExercisePickerOption[]
   trigger?: React.ReactNode
   triggerLabel?: string
+  title?: string
+  description?: string
   onSelect?: (
     option: ExercisePickerOption
   ) => void | boolean | Promise<void | boolean>
+  filterOption?: (option: ExercisePickerOption) => boolean
 }
 
 type CustomExerciseFormState = {
@@ -158,7 +161,10 @@ export function ExercisePickerDialog({
   options,
   trigger,
   triggerLabel = "Exercises",
+  title = "Exercises",
+  description = "Browse your available exercises and search by name, muscle, or equipment.",
   onSelect,
+  filterOption,
 }: ExercisePickerDialogProps) {
   const [open, setOpen] = React.useState(false)
   const [createOpen, setCreateOpen] = React.useState(false)
@@ -194,8 +200,9 @@ export function ExercisePickerDialog({
     [createdOptions, options]
   )
 
-  const filteredOptions = mergedOptions.filter((option) =>
-    matchesQuery(option, deferredQuery)
+  const filteredOptions = mergedOptions.filter(
+    (option) =>
+      matchesQuery(option, deferredQuery) && (filterOption?.(option) ?? true)
   )
 
   function resetCustomExerciseForm(nextName = query.trim()) {
@@ -296,11 +303,8 @@ export function ExercisePickerDialog({
 
       <DialogContent className="gap-0 p-0 sm:max-w-2xl">
         <DialogHeader className="border-b border-border/60 px-5 py-4">
-          <DialogTitle>Exercises</DialogTitle>
-          <DialogDescription>
-            Browse your available exercises and search by name, muscle, or
-            equipment.
-          </DialogDescription>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
         <div className="border-b border-border/60 px-5 py-4">
@@ -311,6 +315,7 @@ export function ExercisePickerDialog({
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search exercises"
               className="pl-9"
+              autoFocus
             />
           </div>
         </div>
