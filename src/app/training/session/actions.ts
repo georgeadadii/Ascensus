@@ -317,6 +317,8 @@ export async function addSet(
       select: {
         id: true,
         setNumber: true,
+        plannedMinReps: true,
+        plannedMaxReps: true,
         weight: true,
         reps: true,
         completedAt: true,
@@ -335,6 +337,8 @@ export async function addSet(
       set: {
         id: createdSet.id,
         setNumber: createdSet.setNumber,
+        plannedMinReps: createdSet.plannedMinReps,
+        plannedMaxReps: createdSet.plannedMaxReps,
         weight: null,
         reps: null,
         completedAt: createdSet.completedAt?.toISOString() ?? null,
@@ -457,6 +461,8 @@ export async function updateSet(
     select: {
       id: true,
       setNumber: true,
+      plannedMinReps: true,
+      plannedMaxReps: true,
       weight: true,
       reps: true,
       completedAt: true,
@@ -498,6 +504,8 @@ export async function updateSet(
     select: {
       id: true,
       setNumber: true,
+      plannedMinReps: true,
+      plannedMaxReps: true,
       weight: true,
       reps: true,
       completedAt: true,
@@ -513,6 +521,8 @@ export async function updateSet(
       set: {
         id: updatedSet.id,
         setNumber: updatedSet.setNumber,
+        plannedMinReps: updatedSet.plannedMinReps,
+        plannedMaxReps: updatedSet.plannedMaxReps,
         weight:
           updatedSet.weight != null ? roundNumber(updatedSet.weight) : null,
         reps: updatedSet.reps,

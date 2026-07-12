@@ -35,7 +35,7 @@ export function TrainingWeeklyVolumeCard({
   )
 
   return (
-    <Card className="border-border/60 py-4 shadow-sm">
+    <Card className="h-[23rem] border-border/60 py-4 shadow-sm">
       <CardHeader className="pb-3">
         <CardTitle className="text-[12.5px] font-semibold">
           Weekly volume

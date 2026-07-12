@@ -10,6 +10,17 @@ import {
 import { auth } from "@/lib/auth/auth"
 import { prisma } from "@/lib/database/prisma"
 import {
+  compareSessionStructureToTemplate,
+  createTemplateFromSessionStructure,
+  createWorkoutSessionFromTemplate,
+  ensureTemplateOwnership,
+  replaceTemplateExercises,
+  updateTemplateFromSessionStructure,
+  validateWorkoutTemplateDraftInput,
+  validateExerciseAccess,
+  type WorkoutTemplateExerciseInput,
+} from "@/lib/training/workout-templates"
+import {
   isPersonalRecordSlotNumber,
   validatePersonalRecordSlotSelection,
   type PersonalRecordSlotNumber,
@@ -45,6 +56,9 @@ export type UpdatePersonalRecordSlotResult =
       }
     }
   | { ok: false; error: string }
+
+export type TemplateMutationResult<T> =
+  { ok: true; data: T } | { ok: false; error: string }
 
 function buildDefaultWorkoutName() {
   return `Workout ${new Date().toLocaleDateString("en-GB", {
@@ -83,6 +97,367 @@ export async function createWorkoutSession(
   return {
     ok: true,
     sessionId: workoutSession.id,
+  }
+}
+
+type WorkoutTemplateDraftMutationResult = TemplateMutationResult<{
+  templateId: string
+  version: number
+  updatedAt: string
+  exerciseCount: number
+}>
+
+export async function createWorkoutTemplateFromDraft(input: {
+  name: string
+  description?: string | null
+  exercises: WorkoutTemplateExerciseInput[]
+}): Promise<WorkoutTemplateDraftMutationResult> {
+  const user = await getAuthenticatedTrainingUser()
+
+  if (!user) {
+    return {
+      ok: false,
+      error: "You must be signed in to create a template.",
+    }
+  }
+
+  const validatedDraft = validateWorkoutTemplateDraftInput(input)
+  if (!validatedDraft.ok) {
+    return validatedDraft
+  }
+
+  const hasAccess = await validateExerciseAccess(
+    prisma,
+    user.id,
+    validatedDraft.data.exercises.map((exercise) => exercise.exerciseId)
+  )
+
+  if (!hasAccess) {
+    return { ok: false, error: "One or more exercises could not be found." }
+  }
+
+  const template = await prisma.$transaction(async (tx) => {
+    const created = await tx.workoutTemplate.create({
+      data: {
+        userId: user.id,
+        name: validatedDraft.data.name,
+        description: validatedDraft.data.description,
+      },
+      select: {
+        id: true,
+        version: true,
+        updatedAt: true,
+      },
+    })
+
+    await replaceTemplateExercises(
+      tx,
+      created.id,
+      validatedDraft.data.exercises
+    )
+
+    const counts = await tx.workoutTemplate.findUnique({
+      where: {
+        id: created.id,
+      },
+      select: {
+        _count: {
+          select: {
+            exercises: true,
+          },
+        },
+      },
+    })
+
+    return {
+      id: created.id,
+      version: created.version,
+      updatedAt: created.updatedAt,
+      exerciseCount: counts?._count.exercises ?? 0,
+    }
+  })
+
+  revalidatePath("/training")
+  revalidatePath(`/training/templates/${template.id}`)
+
+  return {
+    ok: true,
+    data: {
+      templateId: template.id,
+      version: template.version,
+      updatedAt: template.updatedAt.toISOString(),
+      exerciseCount: template.exerciseCount,
+    },
+  }
+}
+
+export async function updateWorkoutTemplateFromDraft(input: {
+  templateId: string
+  name: string
+  description?: string | null
+  exercises: WorkoutTemplateExerciseInput[]
+}): Promise<WorkoutTemplateDraftMutationResult> {
+  const user = await getAuthenticatedTrainingUser()
+
+  if (!user) {
+    return {
+      ok: false,
+      error: "You must be signed in to update a template.",
+    }
+  }
+
+  const validatedDraft = validateWorkoutTemplateDraftInput(input)
+  if (!validatedDraft.ok) {
+    return validatedDraft
+  }
+
+  const hasAccess = await validateExerciseAccess(
+    prisma,
+    user.id,
+    validatedDraft.data.exercises.map((exercise) => exercise.exerciseId)
+  )
+
+  if (!hasAccess) {
+    return { ok: false, error: "One or more exercises could not be found." }
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    const template = await ensureTemplateOwnership(
+      tx,
+      user.id,
+      input.templateId
+    )
+
+    if (!template) {
+      return { ok: false as const, error: "That template could not be found." }
+    }
+
+    await tx.workoutTemplate.update({
+      where: {
+        id: template.id,
+      },
+      data: {
+        name: validatedDraft.data.name,
+        description: validatedDraft.data.description,
+      },
+    })
+
+    await replaceTemplateExercises(
+      tx,
+      template.id,
+      validatedDraft.data.exercises
+    )
+
+    const updated = await tx.workoutTemplate.update({
+      where: {
+        id: template.id,
+      },
+      data: {
+        version: {
+          increment: 1,
+        },
+      },
+      select: {
+        id: true,
+        version: true,
+        updatedAt: true,
+        _count: {
+          select: {
+            exercises: true,
+          },
+        },
+      },
+    })
+
+    return {
+      ok: true as const,
+      data: {
+        templateId: updated.id,
+        version: updated.version,
+        updatedAt: updated.updatedAt.toISOString(),
+        exerciseCount: updated._count.exercises,
+      },
+    }
+  })
+
+  if (!result.ok) {
+    return result
+  }
+
+  revalidatePath("/training")
+  revalidatePath(`/training/templates/${input.templateId}`)
+
+  return result
+}
+
+export const createWorkoutTemplate = createWorkoutTemplateFromDraft
+export const updateWorkoutTemplate = updateWorkoutTemplateFromDraft
+
+export async function deleteWorkoutTemplate(
+  templateId: string
+): Promise<TemplateMutationResult<{ templateId: string }>> {
+  const user = await getAuthenticatedTrainingUser()
+
+  if (!user) {
+    return {
+      ok: false,
+      error: "You must be signed in to delete a template.",
+    }
+  }
+
+  const deleted = await prisma.workoutTemplate.deleteMany({
+    where: {
+      id: templateId,
+      userId: user.id,
+    },
+  })
+
+  if (deleted.count === 0) {
+    return { ok: false, error: "That template could not be found." }
+  }
+
+  revalidatePath("/training")
+  revalidatePath(`/training/templates/${templateId}`)
+
+  return {
+    ok: true,
+    data: {
+      templateId,
+    },
+  }
+}
+
+export async function startWorkoutFromTemplate(
+  templateId: string
+): Promise<CreateWorkoutSessionResult> {
+  const user = await getAuthenticatedTrainingUser()
+
+  if (!user) {
+    return {
+      ok: false,
+      error: "You must be signed in to start a template workout.",
+    }
+  }
+
+  const result = await prisma.$transaction((tx) =>
+    createWorkoutSessionFromTemplate(tx, user.id, templateId)
+  )
+
+  if (!result.ok) {
+    return result
+  }
+
+  revalidatePath("/training")
+  revalidatePath(`/training/session/${result.sessionId}`)
+
+  return result
+}
+
+export async function createTemplateFromWorkout(input: {
+  sessionId: string
+  name: string
+  description?: string | null
+}): Promise<TemplateMutationResult<{ templateId: string }>> {
+  const user = await getAuthenticatedTrainingUser()
+
+  if (!user) {
+    return {
+      ok: false,
+      error: "You must be signed in to save this workout as a template.",
+    }
+  }
+
+  const result = await prisma.$transaction((tx) =>
+    createTemplateFromSessionStructure(
+      tx,
+      user.id,
+      input.sessionId,
+      input.name,
+      input.description
+    )
+  )
+
+  if (!result.ok) {
+    return result
+  }
+
+  revalidatePath("/training")
+  revalidatePath(`/training/templates/${result.templateId}`)
+
+  return {
+    ok: true,
+    data: {
+      templateId: result.templateId,
+    },
+  }
+}
+
+export async function updateTemplateFromWorkout(
+  sessionId: string
+): Promise<TemplateMutationResult<{ templateId: string }>> {
+  const user = await getAuthenticatedTrainingUser()
+
+  if (!user) {
+    return {
+      ok: false,
+      error: "You must be signed in to update this template.",
+    }
+  }
+
+  const result = await prisma.$transaction((tx) =>
+    updateTemplateFromSessionStructure(tx, user.id, sessionId)
+  )
+
+  if (!result.ok) {
+    return result
+  }
+
+  revalidatePath("/training")
+  revalidatePath(`/training/templates/${result.templateId}`)
+
+  return {
+    ok: true,
+    data: {
+      templateId: result.templateId,
+    },
+  }
+}
+
+export async function compareWorkoutToTemplate(sessionId: string): Promise<
+  TemplateMutationResult<{
+    hasTemplate: boolean
+    modified: boolean
+    templateId: string | null
+    templateName: string | null
+  }>
+> {
+  const user = await getAuthenticatedTrainingUser()
+
+  if (!user) {
+    return {
+      ok: false,
+      error: "You must be signed in to compare this workout to a template.",
+    }
+  }
+
+  const result = await compareSessionStructureToTemplate(
+    prisma,
+    user.id,
+    sessionId
+  )
+
+  if (!result.ok) {
+    return result
+  }
+
+  return {
+    ok: true,
+    data: {
+      hasTemplate: result.hasTemplate,
+      modified: result.modified,
+      templateId: result.templateId,
+      templateName: result.templateName,
+    },
   }
 }
 

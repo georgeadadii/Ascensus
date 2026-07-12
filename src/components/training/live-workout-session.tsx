@@ -1,7 +1,15 @@
 "use client"
 
 import * as React from "react"
-import { Clock3, Dumbbell, MoreHorizontal, Plus, Trophy, X } from "lucide-react"
+import {
+  Clock3,
+  Dumbbell,
+  LoaderCircle,
+  MoreHorizontal,
+  Plus,
+  Trophy,
+  X,
+} from "lucide-react"
 import { useRouter } from "next/navigation"
 
 import type { ExercisePickerOption } from "@/app/db/exercises"
@@ -10,6 +18,11 @@ import type {
   TrainingSessionSetView,
   TrainingSessionView,
 } from "@/app/db/training-session"
+import {
+  compareWorkoutToTemplate,
+  createTemplateFromWorkout,
+  updateTemplateFromWorkout,
+} from "@/app/training/actions"
 import {
   addExercise,
   addSet,
@@ -24,6 +37,14 @@ import { ExercisePickerDialog } from "@/components/training/exercise-picker-dial
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -82,6 +103,17 @@ function formatMetricValue(value: number) {
 function formatPrevious(weight: number | null, reps: number | null) {
   if (weight == null || reps == null) return "—"
   return `${formatMetricValue(weight)} × ${reps}`
+}
+
+function formatPlannedReps(
+  plannedMinReps: number | null,
+  plannedMaxReps: number | null
+) {
+  if (plannedMinReps == null || plannedMaxReps == null) return "—"
+  if (plannedMinReps === plannedMaxReps) {
+    return `${plannedMinReps} reps`
+  }
+  return `${plannedMinReps}-${plannedMaxReps} reps`
 }
 
 function formatClock(totalSeconds: number) {
@@ -188,6 +220,9 @@ export function LiveWorkoutSession({
   const [busyAction, setBusyAction] = React.useState<
     "finish" | "cancel" | null
   >(null)
+  const [saveTemplateOpen, setSaveTemplateOpen] = React.useState(false)
+  const [updateTemplateOpen, setUpdateTemplateOpen] = React.useState(false)
+  const [templateName, setTemplateName] = React.useState(session.name)
   const timersRef = React.useRef(new Map<string, number>())
   const isEditable = session.isEditable
 
@@ -418,9 +453,9 @@ export function LiveWorkoutSession({
     setErrorMessage(null)
 
     const result =
-      kind === "finish"
-        ? await finishWorkout(session.id)
-        : await cancelWorkout(session.id)
+      kind === "cancel"
+        ? await cancelWorkout(session.id)
+        : await finishWorkout(session.id)
 
     setBusyAction(null)
 
@@ -431,6 +466,73 @@ export function LiveWorkoutSession({
 
     router.push(result.data.redirectTo)
     router.refresh()
+  }
+
+  async function handleFinishWorkout() {
+    if (!session.templateId) {
+      setTemplateName(titleDraft.trim() || title)
+      setSaveTemplateOpen(true)
+      return
+    }
+
+    setBusyAction("finish")
+    setErrorMessage(null)
+
+    const comparison = await compareWorkoutToTemplate(session.id)
+    setBusyAction(null)
+
+    if (!comparison.ok) {
+      setErrorMessage(comparison.error)
+      return
+    }
+
+    if (!comparison.data.hasTemplate || !comparison.data.modified) {
+      await handleCloseWorkout("finish")
+      return
+    }
+
+    setUpdateTemplateOpen(true)
+  }
+
+  async function finishWithoutTemplateChanges() {
+    setSaveTemplateOpen(false)
+    setUpdateTemplateOpen(false)
+    await handleCloseWorkout("finish")
+  }
+
+  async function handleSaveTemplateAfterWorkout() {
+    setBusyAction("finish")
+    setErrorMessage(null)
+
+    const result = await createTemplateFromWorkout({
+      sessionId: session.id,
+      name: templateName,
+    })
+
+    if (!result.ok) {
+      setBusyAction(null)
+      setErrorMessage(result.error)
+      return
+    }
+
+    setSaveTemplateOpen(false)
+    await handleCloseWorkout("finish")
+  }
+
+  async function handleUpdateTemplateAfterWorkout() {
+    setBusyAction("finish")
+    setErrorMessage(null)
+
+    const result = await updateTemplateFromWorkout(session.id)
+
+    if (!result.ok) {
+      setBusyAction(null)
+      setErrorMessage(result.error)
+      return
+    }
+
+    setUpdateTemplateOpen(false)
+    await handleCloseWorkout("finish")
   }
 
   return (
@@ -505,7 +607,7 @@ export function LiveWorkoutSession({
             <Button
               size="sm"
               disabled={!isEditable || busyAction != null}
-              onClick={() => void handleCloseWorkout("finish")}
+              onClick={() => void handleFinishWorkout()}
             >
               Finish workout
             </Button>
@@ -528,6 +630,93 @@ export function LiveWorkoutSession({
           </div>
         ) : null}
       </div>
+
+      <Dialog open={saveTemplateOpen} onOpenChange={setSaveTemplateOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Save this workout as a template?</DialogTitle>
+            <DialogDescription>
+              Copy this workout&apos;s exercise and set structure into a
+              reusable template. Reps will be saved as fixed planned ranges and
+              weight will be saved as the target weight.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <label
+              htmlFor="finish-template-name"
+              className="text-sm font-medium"
+            >
+              Template name
+            </label>
+            <Input
+              id="finish-template-name"
+              value={templateName}
+              onChange={(event) => setTemplateName(event.target.value)}
+              placeholder="Template name"
+              autoFocus
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busyAction != null}
+              onClick={() => void finishWithoutTemplateChanges()}
+            >
+              Skip
+            </Button>
+            <Button
+              type="button"
+              disabled={busyAction != null}
+              onClick={() => void handleSaveTemplateAfterWorkout()}
+            >
+              {busyAction === "finish" ? (
+                <LoaderCircle className="animate-spin" />
+              ) : (
+                <Plus />
+              )}
+              Save Template
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={updateTemplateOpen} onOpenChange={setUpdateTemplateOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              You modified this workout. Would you like to update the template?
+            </DialogTitle>
+            <DialogDescription>
+              The final exercise and set structure will replace the template,
+              while historical workouts remain unchanged.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={busyAction != null}
+              onClick={() => void finishWithoutTemplateChanges()}
+            >
+              Keep Existing Template
+            </Button>
+            <Button
+              type="button"
+              disabled={busyAction != null}
+              onClick={() => void handleUpdateTemplateAfterWorkout()}
+            >
+              {busyAction === "finish" ? (
+                <LoaderCircle className="animate-spin" />
+              ) : null}
+              Update Template
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex flex-1 flex-col p-4 sm:p-[18px]">
         {exercises.length === 0 ? (
@@ -644,8 +833,11 @@ export function LiveWorkoutSession({
                           <tr className="border-b border-border/60 text-left text-xs uppercase tracking-[0.14em] text-muted-foreground">
                             <th className="px-4 py-3 font-medium">Set</th>
                             <th className="px-4 py-3 font-medium">Previous</th>
+                            <th className="px-4 py-3 font-medium">Planned</th>
                             <th className="px-4 py-3 font-medium">Weight</th>
-                            <th className="px-4 py-3 font-medium">Reps</th>
+                            <th className="px-4 py-3 font-medium">
+                              Actual reps
+                            </th>
                             <th className="px-4 py-3 font-medium">Complete</th>
                             <th className="px-4 py-3 font-medium"></th>
                           </tr>
@@ -664,6 +856,12 @@ export function LiveWorkoutSession({
                               </td>
                               <td className="px-4 py-3 text-muted-foreground">
                                 {findPreviousLabel(exercise, set.setNumber)}
+                              </td>
+                              <td className="px-4 py-3 text-muted-foreground">
+                                {formatPlannedReps(
+                                  set.plannedMinReps,
+                                  set.plannedMaxReps
+                                )}
                               </td>
                               <td className="px-4 py-3">
                                 <Input
@@ -701,7 +899,7 @@ export function LiveWorkoutSession({
                                   type="number"
                                   inputMode="numeric"
                                   step="1"
-                                  placeholder="0"
+                                  placeholder="Actual reps"
                                   value={set.repsInput}
                                   disabled={!isEditable}
                                   onChange={(event) => {

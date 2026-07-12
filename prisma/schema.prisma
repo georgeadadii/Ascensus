@@ -26,9 +26,9 @@ model User {
   nutritionEntries NutritionEntry[]
   waterLogs        WaterLog[]
 
-  workoutTemplates WorkoutTemplate[]
-  workoutSessions  WorkoutSession[]
-  personalRecords  PersonalRecord[]
+  workoutTemplates    WorkoutTemplate[]
+  workoutSessions     WorkoutSession[]
+  personalRecords     PersonalRecord[]
   personalRecordSlots PersonalRecordSlot[]
 
   @@unique([email])
@@ -299,9 +299,9 @@ model Exercise {
   isCustom   Boolean        @default(false)
   userId     String?
 
-  templateExercises WorkoutTemplateExercise[]
-  workoutExercises  WorkoutExercise[]
-  personalRecords   PersonalRecord[]
+  templateExercises   WorkoutTemplateExercise[]
+  workoutExercises    WorkoutExercise[]
+  personalRecords     PersonalRecord[]
   personalRecordSlots PersonalRecordSlot[]
 
   createdAt DateTime @default(now())
@@ -320,6 +320,7 @@ model WorkoutTemplate {
   name        String
   description String?
   split       String? // Push, Pull, Legs, Full Body, etc.
+  version     Int     @default(1)
 
   user      User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
   exercises WorkoutTemplateExercise[]
@@ -337,22 +338,37 @@ model WorkoutTemplateExercise {
   exerciseId String
   order      Int
 
-  targetSets   Int?
-  targetReps   String? // "5", "8-10", etc.
-  targetWeight Float?
-  notes        String?
+  notes String?
 
-  template WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
-  exercise Exercise        @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  template WorkoutTemplate      @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  exercise Exercise             @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  sets     WorkoutTemplateSet[]
 
-  @@unique([templateId, exerciseId])
+  @@unique([templateId, order])
   @@index([templateId])
 }
 
+model WorkoutTemplateSet {
+  id                 String   @id @default(cuid())
+  templateExerciseId String
+  setNumber          Int
+  minReps            Int
+  maxReps            Int
+  targetWeight       Float?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  templateExercise WorkoutTemplateExercise @relation(fields: [templateExerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([templateExerciseId, setNumber])
+  @@index([templateExerciseId])
+}
+
 model WorkoutSession {
-  id         String  @id @default(cuid())
-  userId     String
-  templateId String?
+  id              String  @id @default(cuid())
+  userId          String
+  templateId      String?
+  templateVersion Int?
 
   name   String
   status WorkoutStatus @default(IN_PROGRESS)
@@ -396,13 +412,15 @@ model WorkoutSet {
   id                String @id @default(cuid())
   workoutExerciseId String
 
-  setNumber Int
-  weight    Float?
-  reps      Int?
-  rpe       Float?
-  isWarmup  Boolean @default(false)
-  isFailure Boolean @default(false)
-  isDropSet Boolean @default(false)
+  setNumber      Int
+  plannedMinReps Int?
+  plannedMaxReps Int?
+  weight         Float?
+  reps           Int?
+  rpe            Float?
+  isWarmup       Boolean @default(false)
+  isFailure      Boolean @default(false)
+  isDropSet      Boolean @default(false)
 
   volume      Float? // weight * reps
   completedAt DateTime?

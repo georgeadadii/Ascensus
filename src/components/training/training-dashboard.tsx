@@ -1,4 +1,5 @@
 import { Layers3 } from "lucide-react"
+import Link from "next/link"
 
 import type { ExercisePickerOption } from "@/app/db/exercises"
 import type { TrainingOverview } from "@/app/db/training"
@@ -46,10 +47,6 @@ export function TrainingDashboard({
         </div>
 
         <div className="flex flex-wrap items-center justify-end gap-2">
-          <Button variant="outline" size="sm" className="w-full sm:w-auto">
-            <Layers3 />
-            Templates
-          </Button>
           <ExercisePickerDialog options={exerciseOptions} />
           <StartWorkoutDialog />
         </div>

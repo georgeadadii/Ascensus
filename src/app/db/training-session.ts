@@ -4,6 +4,8 @@ import { prisma } from "@/lib/database/prisma"
 export type TrainingSessionSetView = {
   id: string
   setNumber: number
+  plannedMinReps: number | null
+  plannedMaxReps: number | null
   weight: number | null
   reps: number | null
   completedAt: string | null
@@ -32,6 +34,8 @@ export type TrainingSessionView = {
   id: string
   name: string
   status: WorkoutStatus
+  templateId: string | null
+  templateVersion: number | null
   startedAt: string
   finishedAt: string | null
   isEditable: boolean
@@ -52,6 +56,8 @@ function roundNumber(value: number | null | undefined) {
 function mapSet(set: {
   id: string
   setNumber: number
+  plannedMinReps: number | null
+  plannedMaxReps: number | null
   weight: number | null
   reps: number | null
   completedAt: Date | null
@@ -59,6 +65,8 @@ function mapSet(set: {
   return {
     id: set.id,
     setNumber: set.setNumber,
+    plannedMinReps: set.plannedMinReps,
+    plannedMaxReps: set.plannedMaxReps,
     weight: set.weight != null ? roundNumber(set.weight) : null,
     reps: set.reps,
     completedAt: set.completedAt?.toISOString() ?? null,
@@ -189,6 +197,8 @@ export async function getTrainingSessionExercise(
         select: {
           id: true,
           setNumber: true,
+          plannedMinReps: true,
+          plannedMaxReps: true,
           weight: true,
           reps: true,
           completedAt: true,
@@ -230,6 +240,8 @@ export async function getTrainingSession(
       id: true,
       name: true,
       status: true,
+      templateId: true,
+      templateVersion: true,
       startedAt: true,
       finishedAt: true,
       exercises: {
@@ -256,6 +268,8 @@ export async function getTrainingSession(
             select: {
               id: true,
               setNumber: true,
+              plannedMinReps: true,
+              plannedMaxReps: true,
               weight: true,
               reps: true,
               completedAt: true,
@@ -290,6 +304,8 @@ export async function getTrainingSession(
     id: session.id,
     name: session.name,
     status: session.status,
+    templateId: session.templateId,
+    templateVersion: session.templateVersion,
     startedAt: session.startedAt.toISOString(),
     finishedAt: session.finishedAt?.toISOString() ?? null,
     isEditable: session.status === "IN_PROGRESS",

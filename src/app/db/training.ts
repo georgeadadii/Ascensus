@@ -35,8 +35,8 @@ export type TrainingOverview = {
     id: string
     name: string
     description: string | null
-    split: string | null
     exerciseCount: number
+    updatedAt: string
   }[]
   weeklyVolume: {
     day: string
@@ -129,7 +129,7 @@ export async function getTrainingOverview(
           id: true,
           name: true,
           description: true,
-          split: true,
+          updatedAt: true,
           _count: {
             select: {
               exercises: true,
@@ -211,8 +211,8 @@ export async function getTrainingOverview(
       id: template.id,
       name: template.name,
       description: template.description,
-      split: template.split,
       exerciseCount: template._count.exercises,
+      updatedAt: template.updatedAt.toISOString(),
     })),
     weeklyVolume,
     personalRecords,
