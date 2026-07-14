@@ -26,6 +26,11 @@ model User {
   nutritionEntries NutritionEntry[]
   waterLogs        WaterLog[]
 
+  workoutTemplates    WorkoutTemplate[]
+  workoutSessions     WorkoutSession[]
+  personalRecords     PersonalRecord[]
+  personalRecordSlots PersonalRecordSlot[]
+
   @@unique([email])
   @@map("user")
 }
@@ -255,4 +260,214 @@ model WaterLog {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, date])
+}
+
+enum WorkoutStatus {
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ExerciseCategory {
+  BARBELL
+  DUMBBELL
+  MACHINE
+  CABLE
+  BODYWEIGHT
+  CARDIO
+  OTHER
+}
+
+enum ExerciseSource {
+  SEEDED
+  API_NINJAS
+  CUSTOM
+}
+
+model Exercise {
+  id String @id @default(cuid())
+
+  name          String
+  category      ExerciseCategory @default(OTHER)
+  primaryMuscle String?
+  equipment     String?
+  difficulty    String?
+  instructions  String?
+
+  source     ExerciseSource @default(SEEDED)
+  externalId String?
+  isCustom   Boolean        @default(false)
+  userId     String?
+
+  templateExercises   WorkoutTemplateExercise[]
+  workoutExercises    WorkoutExercise[]
+  personalRecords     PersonalRecord[]
+  personalRecordSlots PersonalRecordSlot[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([source, name, userId])
+  @@index([name])
+  @@index([userId])
+  @@index([primaryMuscle])
+  @@index([equipment])
+}
+
+model WorkoutTemplate {
+  id          String  @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  split       String? // Push, Pull, Legs, Full Body, etc.
+  version     Int     @default(1)
+
+  user      User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercises WorkoutTemplateExercise[]
+  sessions  WorkoutSession[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model WorkoutTemplateExercise {
+  id         String @id @default(cuid())
+  templateId String
+  exerciseId String
+  order      Int
+
+  notes String?
+
+  template WorkoutTemplate      @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  exercise Exercise             @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  sets     WorkoutTemplateSet[]
+
+  @@unique([templateId, order])
+  @@index([templateId])
+}
+
+model WorkoutTemplateSet {
+  id                 String   @id @default(cuid())
+  templateExerciseId String
+  setNumber          Int
+  minReps            Int
+  maxReps            Int
+  targetWeight       Float?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  templateExercise WorkoutTemplateExercise @relation(fields: [templateExerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([templateExerciseId, setNumber])
+  @@index([templateExerciseId])
+}
+
+model WorkoutSession {
+  id              String  @id @default(cuid())
+  userId          String
+  templateId      String?
+  templateVersion Int?
+
+  name   String
+  status WorkoutStatus @default(IN_PROGRESS)
+
+  startedAt       DateTime  @default(now())
+  finishedAt      DateTime?
+  durationMinutes Int?
+
+  totalVolume Float   @default(0)
+  totalSets   Int     @default(0)
+  notes       String?
+
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template  WorkoutTemplate?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  exercises WorkoutExercise[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, startedAt])
+  @@index([templateId])
+}
+
+model WorkoutExercise {
+  id         String @id @default(cuid())
+  sessionId  String
+  exerciseId String
+  order      Int
+
+  notes String?
+
+  session  WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exercise Exercise       @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  sets     WorkoutSet[]
+
+  @@index([sessionId])
+  @@index([exerciseId])
+}
+
+model WorkoutSet {
+  id                String @id @default(cuid())
+  workoutExerciseId String
+
+  setNumber      Int
+  plannedMinReps Int?
+  plannedMaxReps Int?
+  weight         Float?
+  reps           Int?
+  rpe            Float?
+  isWarmup       Boolean @default(false)
+  isFailure      Boolean @default(false)
+  isDropSet      Boolean @default(false)
+
+  volume      Float? // weight * reps
+  completedAt DateTime?
+
+  workoutExercise WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([workoutExerciseId])
+}
+
+model PersonalRecord {
+  id         String @id @default(cuid())
+  userId     String
+  exerciseId String
+
+  weight             Float
+  reps               Int
+  estimatedOneRepMax Float?
+  volume             Float?
+
+  achievedAt   DateTime
+  workoutSetId String?
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, exerciseId])
+  @@index([achievedAt])
+}
+
+model PersonalRecordSlot {
+  id         String @id @default(cuid())
+  userId     String
+  exerciseId String
+  slot       Int
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, slot])
+  @@unique([userId, exerciseId])
+  @@index([userId, slot])
+  @@index([exerciseId])
 }
