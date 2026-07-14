@@ -30,6 +30,7 @@ model User {
   workoutSessions     WorkoutSession[]
   personalRecords     PersonalRecord[]
   personalRecordSlots PersonalRecordSlot[]
+  sleepLogs           SleepLog[]
 
   @@unique([email])
   @@map("user")
@@ -470,4 +471,44 @@ model PersonalRecordSlot {
   @@unique([userId, exerciseId])
   @@index([userId, slot])
   @@index([exerciseId])
+}
+
+enum SleepSource {
+  MANUAL
+  APPLE_HEALTH
+  HEALTH_CONNECT
+}
+
+model SleepLog {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // The date the sleep is assigned to, normally the morning the user woke up.
+  date DateTime
+
+  bedTime      DateTime
+  sleepTime    DateTime?
+  wakeTime     DateTime
+  outOfBedTime DateTime?
+
+  timeInBedMinutes    Int
+  timeAsleepMinutes   Int
+  sleepLatencyMinutes Int?
+  awakeMinutes        Int?
+  sleepEfficiency     Float?
+
+  qualityScore    Int?
+  restednessScore Int?
+  awakenings      Int?
+  notes           String?
+
+  source SleepSource @default(MANUAL)
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+  @@index([userId, wakeTime])
 }
