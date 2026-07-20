@@ -1,7 +1,9 @@
 "use client"
 
+import { useState } from "react"
 import { LineChart, PlusIcon } from "lucide-react"
 
+import { ManualSleepLogDialog } from "@/components/sleep/manual-sleep-log-dialog"
 import { RecentSleepCard } from "@/components/sleep/recent-sleep-card"
 import { SleepDetailsCard } from "@/components/sleep/sleep-details-card"
 import { SleepDurationChart } from "@/components/sleep/sleep-duration-chart"
@@ -14,6 +16,8 @@ type SleepDashboardProps = {
 }
 
 export function SleepDashboard({ data }: SleepDashboardProps) {
+  const [isLogSleepDialogOpen, setIsLogSleepDialogOpen] = useState(false)
+
   return (
     <div className="flex flex-1 flex-col">
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/60 px-6 py-3.5">
@@ -29,7 +33,7 @@ export function SleepDashboard({ data }: SleepDashboardProps) {
             <LineChart />
             Trends
           </Button>
-          <Button size="sm">
+          <Button size="sm" onClick={() => setIsLogSleepDialogOpen(true)}>
             <PlusIcon />
             Log sleep
           </Button>
@@ -56,6 +60,11 @@ export function SleepDashboard({ data }: SleepDashboardProps) {
           />
         </section>
       </div>
+
+      <ManualSleepLogDialog
+        open={isLogSleepDialogOpen}
+        onOpenChange={setIsLogSleepDialogOpen}
+      />
     </div>
   )
 }
